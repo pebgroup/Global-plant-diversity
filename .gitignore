@@ -1,7 +1,7 @@
 .html
 *.rds
 *.csv
-*.Rproj.user/
+*.Rproj
 *.Rhistory
 *.RData
 *.Ruserdata
@@ -10,7 +10,7 @@
 *.txt
 *.odt
 *.tre
-.Rproj.user
+.Rproj.user/
 data/
 literature/
 old_stuff/
