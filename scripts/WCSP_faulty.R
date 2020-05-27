@@ -1,7 +1,8 @@
 # Non-accepted species after matching?
 ## Overview here, how to fix it from line 50 on
+library(tidyverse)
 
-wc_all <- readRDS("data/WCSP.apg.rds")
+wc_all <- readRDS("./data/WCSP.apg.rds")
 wc_all <- wc_all[-which(wc_all$accepted_plant_name_id==""),]
 
 table(wc_all$taxon_status[wc_all$plant_name_id %in% wc_all$accepted_plant_name_id])
@@ -95,14 +96,25 @@ wcsp2 <- merge(wcsp2, lev1.tmp.sub[,c("plant_name_id", "accepted_plant_name_id_l
 View(wcsp2[,c("accepted_plant_name_id", "accepted_plant_name_id.y", "accepted_plant_name_id_lev2")])
 
 
-# Remove taxa stuck in a loop and pointing to themselves although being tagged as non-Accepted
-loops <- which(as.character(wcsp2$plant_name_id) == as.character(wcsp2$accepted_plant_name_id) & wcsp2$taxon_status!="Accepted")
+# Remove taxa stuck in a loop of synonyms
+loops <- which(wcsp2$plant_name_id %in% lev2$plant_name_id[lev2$taxon_status!="Accepted"])
 wcsp2 <- wcsp2[-loops,]
 
 
 
-
 # Cleanup ####
+## list to update already existing trees and files etc.
+update_list <- wcsp2[!is.na(wcsp2$accepted_plant_name_id.y),]
+
+update_list$accepted_plant_name_id.y[!is.na(update_list$accepted_plant_name_id_lev2)] <- 
+  update_list$accepted_plant_name_id_lev2[!is.na(update_list$accepted_plant_name_id_lev2)]
+update_list <- update_list %>%
+  rename(old_accepted_ID = accepted_plant_name_id) %>%
+  rename(new_accepted_ID = accepted_plant_name_id.y) %>%  
+  select(c(plant_name_id, old_accepted_ID, new_accepted_ID))
+
+
+## building a new clean WCSP version
 wcsp2$accepted_plant_name_id[!is.na(wcsp2$accepted_plant_name_id.y)] <- wcsp2$accepted_plant_name_id.y[!is.na(wcsp2$accepted_plant_name_id.y)]
 wcsp2$accepted_plant_name_id[!is.na(wcsp2$accepted_plant_name_id_lev2)] <- wcsp2$accepted_plant_name_id_lev2[!is.na(wcsp2$accepted_plant_name_id_lev2)]
 wcsp2 <- wcsp2 %>%
@@ -112,7 +124,7 @@ table(wcsp2$taxon_status[wcsp2$plant_name_id %in% wcsp2$accepted_plant_name_id])
 
 
 saveRDS(wcsp2, "data/WCSP_clean.apg.rds")
-
+saveRDS(update_list, "data/wcsp_update_list.rds")
 
 
 
