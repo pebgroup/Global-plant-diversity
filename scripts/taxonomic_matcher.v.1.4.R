@@ -4,7 +4,7 @@
   rm(list=ls())
   library(tidyverse)
   
-  # chose dataset: BIEN or NCBI etc
+  # chose dataset: BIEN or NCBI or GBIF
   DB.name <- "GBIF"
   
   
@@ -22,7 +22,8 @@
   ##### READ WCSP DATA ###########################################################
   
   # wc_all <- readRDS("data/wcp_dec_19.rds")
-  wc_all <- readRDS("data/WCSP.apg.rds")
+  # wc_all <- readRDS("data/WCSP.apg.rds")
+  wc_all <- readRDS("data/WCSP_clean.apg.rds")
   
   
   #### RENAMING WCSP #############################################################

@@ -20,6 +20,7 @@ theme_set(theme_bw())
 #load("data/comm.RData")
 sr <- readRDS("data/comm.rds")
 ## MRD
+#mrd <- readRDS("data/polytomie_RD_results.rds")
 mrd <- readRDS("data/mrd.rds")
 ## shapefile
 shape <- readOGR("shapefile/level3.shp")
@@ -34,6 +35,8 @@ sr_df <- data.frame(species_richness = rowSums(sr), region =row.names(sr))
 ## subtract observed and expected devide by standard error (x-mu/sigma)
 ##(Hawkins, B. A., Diniz-Filho, J. A. F., & Soeller, S. A. (2005). Water links the historical and contemporary components of the Australian bird diversity gradient. Journal of Biogeography, 32(6), 1035–1042. https://doi.org/10.1111/j.1365-2699.2004.01238.x)
 ## --> Z-scores higher than 1.96 indicate that there is a 95% chance that the MRD in the cell is higher than would be expected if species were random global sample. This is supposed to account for differences in species richness between the plots. 
+
+
 
 # plot random distribution with observed value
 mrd.p <- mrd %>% 
@@ -60,9 +63,9 @@ shape@data$sr <- sr_df$species_richness
 shape@data$mrd <- mrd[,1]
 shape@data$mrd_z_score <- z
 shape@data$mrd_z_score_binary <- shape@data$mrd_z_score
-shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score< -1.97)] <- -1
-shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>1.97)] <- 1
-shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>-1.97 & shape@data$mrd_z_score<1.97)] <- 0
+shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score< -1.97)] <- "-"
+shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>1.97)] <- "+"
+shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>-1.97 & shape@data$mrd_z_score<1.97)] <- "none"
 
 cor.test(shape@data$sr, shape@data$mrd, method="s")
 cor.test(shape@data$sr, shape@data$mrd_z_score, method="s")
@@ -82,7 +85,7 @@ ggplot(shp) +
   guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
   theme_void()+
   theme(legend.position = "bottom")
-ggsave(filename=paste0("results/sr_map", gsub(" |:", "_", date()), ".png"), dpi=600, width=10, height=7)
+ggsave(filename=paste0("results/sr_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
 
 
 
@@ -93,7 +96,7 @@ ggplot(shp) +
   guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
   theme_void()+
   theme(legend.position = "bottom")
-ggsave(filename=paste0("results/mrd_map", gsub(" |:", "_", date()), ".png"), dpi=600, width=10, height=7)
+ggsave(filename=paste0("results/mrd_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
 
 
 ggplot(shp) + 
@@ -102,7 +105,7 @@ ggplot(shp) +
   guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
   theme_void()+
   theme(legend.position = "bottom")
-ggsave(filename=paste0("results/mrd_z_score_map", gsub(" |:", "_", date()), ".png"), dpi=600, width=10, height=7)
+ggsave(filename=paste0("results/mrd_z_score_map", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
 
 
 
@@ -111,7 +114,7 @@ shp <- na.omit(shp)
 ggplot(shp) + 
   geom_sf(aes(fill = factor(mrd_z_score_binary)), lwd=0.1, na.rm = TRUE) + 
 #  scale_fill_viridis_d(option = "plasma")+ 
-  scale_fill_manual(values = c("lightblue", "grey", "darkorange")) + 
+  scale_fill_manual(values = c("lightblue", "darkorange", "grey")) + 
   theme_void()+
   theme(legend.position = "bottom")
 ggsave(filename=paste0("results/mrd_z_score_binary_map", gsub(" |:", "_", date()), ".png"), dpi=600, width=10, height=7)
@@ -125,6 +128,8 @@ ggplot(shp, aes(sr, mrd_z_score, col=factor(mrd_z_score_binary)))+
   geom_point()+
   scale_x_log10()+
   geom_smooth(method="lm")
+ggsave(filename=paste0("results/mrd_z_score_sr_scatterplot", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=6, height=4)
+
 
 ggplot(shp, aes(sr, mrd_z_score, group=factor(CONTINENT), label=LEVEL_3_CO))+
 #  geom_point()+
@@ -132,6 +137,7 @@ ggplot(shp, aes(sr, mrd_z_score, group=factor(CONTINENT), label=LEVEL_3_CO))+
   scale_x_log10()+
   geom_smooth(method="lm")+
   facet_wrap(~CONTINENT, scales = "free")
+ggsave(filename=paste0("results/mrd_z_score_sr_per_continent", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=9, height=7)
 
 
 #Get percentage higher lower for each continent

@@ -7,7 +7,7 @@ library(phytools)
 library(dplyr)
 
 phylo <- read.tree("trees/allmb_matched_no_multi.tre")
-wcsp <- readRDS("data/WCSP.apg.rds")
+wcsp <- readRDS("data/WCSP_clean.apg.rds")
 wcsp <- wcsp %>% 
   select(-family) %>%
   rename(family = family.apg)
@@ -256,7 +256,7 @@ phylo.dat.org <- wcsp[which(as.character(wcsp$plant_name_id) %in% phylo$tip.labe
 nrow(phylo.dat.org)
 table(phylo.dat.org$taxon_status)
 
-## There is some non- accepted species in the Snith&Brown matched version.
+## There is some non- accepted species in the Smith&Brown matched version.
 table(phylo.dat.org$taxon_rank, phylo.dat.org$taxon_status)
 
 

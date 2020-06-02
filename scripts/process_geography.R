@@ -4,11 +4,11 @@ library(data.table)
 
 
 #read WCSP
-published <- fread("data/published_names_19_10_2018.csv", header=TRUE, sep="|")
-unpublished <- fread("data/unpublished_names_19_10_2018.csv", header=TRUE, sep="|")
-wcsp <- rbind(published,unpublished)
-rm(published, unpublished)
-#wcsp <- readRDS("data/WCSP.apg.rds")
+#published <- fread("data/published_names_19_10_2018.csv", header=TRUE, sep="|")
+#unpublished <- fread("data/unpublished_names_19_10_2018.csv", header=TRUE, sep="|")
+#wcsp <- rbind(published,unpublished)
+#rm(published, unpublished)
+wcsp <- readRDS("data/WCSP_clean.apg.rds")
 #wcsp <- readRDS("data/wcp_dec_19.rds")
 
 # SWITCH
@@ -133,15 +133,15 @@ rm(idx)
 # populating community table
 Sys.time()
 for(i in 1:nrow(dist)){
-  comm[dist[i,"area_code_l3"], dist[i,"accepted_name_idx"]] = 1
+  comm[dist[i,"area_code_l3"][[1]], dist[i,"accepted_name_idx"][[1]]] = 1
   if(!i%%1000)cat(i,"\r")
 }
 rm(i)
 Sys.time()
 
 
-#saveRDS(comm, file="data/comm.rds")
-saveRDS(comm, file="data/comm_old_wcsp.rds")
+saveRDS(comm, file="data/comm.rds")
+#saveRDS(comm, file="data/comm_old_wcsp.rds")
 
 
 

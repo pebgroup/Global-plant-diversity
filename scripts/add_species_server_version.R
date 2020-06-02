@@ -72,8 +72,8 @@ library(ape)
 library(phytools)
 library(tidyverse)
 
-phylo <- read.tree("allmb_matched_no_multi.tre")
-wcsp <- readRDS("WCSP.apg.rds")
+phylo <- read.tree("trees/allmb_matched_no_multi.tre")
+wcsp <- readRDS("data/WCSP_clean.apg.rds")
 wcsp <- wcsp %>% select(-family) %>%
   rename("family" = "family.apg")
 

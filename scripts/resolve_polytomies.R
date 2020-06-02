@@ -9,11 +9,7 @@ library(parallel)
 # n=20 takes 20 minutes. 4 parallel cores take 70seconds for 4 runs --> 30 minutes for 100 runs
 
 
-phylo <- read.tree("allmb_matched_added_species_2.tre") 
-
-# fix branch lengths. happens while adding species taxonomically
-#
-phylo$edge.length[which(phylo$edge.length <= 0)] <- 0.0000001
+phylo <- read.tree("trees/allmb_matched_added_species_2.tre") 
 
 
 ## GO
@@ -36,7 +32,7 @@ rd <- function(i, phylo){
   RD <- dist.all2[1:Ntip(temp)]
   return(RD)
 } 
-RD <- mclapply(1:reps, rd, phylo=phylo, mc.cores = 8)
+RD <- mclapply(1:reps, rd, phylo=phylo, mc.cores = 4)
 Sys.time()
 output <- matrix(unlist(RD), ncol = length(RD[[1]]), byrow = TRUE)
 

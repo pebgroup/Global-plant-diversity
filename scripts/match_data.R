@@ -138,49 +138,10 @@ table(is.na(fin$accepted_id[fin$source=="ncbi"]))/nrow(fin[fin$source=="ncbi",])
 table(is.na(fin$accepted_id[fin$source=="gbif"]))/nrow(fin[fin$source=="gbif",]) # 84%
 
 
-
-
-
-##### NON ACCEPTED INVESTIGATION ###################################################################################
-# found 250 non accepted or non species taxa on the final tree. investigate where they come from: which matching procedure and so on
-# check status in WCSP
-fin <- fin[-which(is.na(fin$accepted_id)),]
-wcsp <- readRDS("data/WCSP.apg.rds")
-wcsp <- wcsp %>% 
-  select(-family) %>%
-  rename(family = family.apg)
-
-table(fin$accepted_id %in% wcsp$plant_name_id)
-phylo.dat<- wcsp[wcsp$plant_name_id %in% fin$accepted_id,]
-nrow(phylo.dat)
-table(phylo.dat$taxon_status, phylo.dat$taxon_rank)
-table(phylo.dat$taxon_rank)
-pd.invalid <- phylo.dat[phylo.dat$taxon_status!="Accepted" | phylo.dat$taxon_rank!="Species",]
-nrow(pd.invalid)
-table(fin$source[fin$accepted_id %in% pd.invalid$plant_name_id])
-
-gbif.matches <- readRDS("data/fin_species_match_GBIF.rds")
-ncbi.matches <- readRDS("data/fin_species_match_NCBI.rds")
-
-View(gbif.matches[which(gbif.matches$accepted_plant_name_id %in% pd.invalid$plant_name_id),])
-gbif.sub <- gbif.matches[which(gbif.matches$accepted_plant_name_id %in% pd.invalid$plant_name_id),]
-table(gbif.sub$taxon_rank)
-# all species from gbif
-wcsp[wcsp$plant_name_id=="1010729-az",]
-wcsp$taxon_status[wcsp$plant_name_id %in% gbif.sub$accepted_plant_name_id]
-
-# ok the gbif matching is wrong. there is synonyms in the accepted plant name IDs
-
-ncbi.sub <- ncbi.matches[which(ncbi.matches$accepted_plant_name_id %in% pd.invalid$plant_name_id),]
-table(ncbi.sub$taxon_rank)
-# varieties and ssps are from NCBI matching side - elevated to species part mistake?
-
-# how is the status of all outcomes from gbif matching?
-table(wcsp$taxon_status[wcsp$plant_name_id %in% gbif.matches$accepted_plant_name_id])
-# ok that`s not good....
-# mistakes happen in strict match no author, strict match, and matching authors
-
-######################################################################################################################
+wcsp <- readRDS("data/WCSP_clean.apg.rds")
+wcsp <- wcsp[wcsp$plant_name_id %in% fin$accepted_id,]
+table(wcsp$taxon_status)
+# should be all accepted
 
 
 
@@ -271,3 +232,44 @@ write.tree(clean_tree, "trees/allmb_matched_no_multi.tre")
 
 
   
+# old stuff ##
+# ##### NON ACCEPTED INVESTIGATION ###################################################################################
+# # found 250 non accepted or non species taxa on the final tree. investigate where they come from: which matching procedure and so on
+# # check status in WCSP
+# fin <- fin[-which(is.na(fin$accepted_id)),]
+# wcsp <- readRDS("data/WCSP_clean.apg.rds")
+# wcsp <- wcsp %>% 
+#   select(-family) %>%
+#   rename(family = family.apg)
+# 
+# table(fin$accepted_id %in% wcsp$plant_name_id)
+# phylo.dat<- wcsp[wcsp$plant_name_id %in% fin$accepted_id,]
+# nrow(phylo.dat)
+# table(phylo.dat$taxon_status, phylo.dat$taxon_rank)
+# table(phylo.dat$taxon_rank)
+# pd.invalid <- phylo.dat[phylo.dat$taxon_status!="Accepted" | phylo.dat$taxon_rank!="Species",]
+# nrow(pd.invalid)
+# table(fin$source[fin$accepted_id %in% pd.invalid$plant_name_id])
+# 
+# gbif.matches <- readRDS("data/fin_species_match_GBIF.rds")
+# ncbi.matches <- readRDS("data/fin_species_match_NCBI.rds")
+# 
+# View(gbif.matches[which(gbif.matches$accepted_plant_name_id %in% pd.invalid$plant_name_id),])
+# gbif.sub <- gbif.matches[which(gbif.matches$accepted_plant_name_id %in% pd.invalid$plant_name_id),]
+# table(gbif.sub$taxon_rank)
+# # all species from gbif
+# wcsp[wcsp$plant_name_id=="1010729-az",]
+# wcsp$taxon_status[wcsp$plant_name_id %in% gbif.sub$accepted_plant_name_id]
+# 
+# # ok the gbif matching is wrong. there is synonyms in the accepted plant name IDs
+# 
+# ncbi.sub <- ncbi.matches[which(ncbi.matches$accepted_plant_name_id %in% pd.invalid$plant_name_id),]
+# table(ncbi.sub$taxon_rank)
+# # varieties and ssps are from NCBI matching side - elevated to species part mistake?
+# 
+# # how is the status of all outcomes from gbif matching?
+# table(wcsp$taxon_status[wcsp$plant_name_id %in% gbif.matches$accepted_plant_name_id])
+# # ok that`s not good....
+# # mistakes happen in strict match no author, strict match, and matching authors
+# 
+# ######################################################################################################################

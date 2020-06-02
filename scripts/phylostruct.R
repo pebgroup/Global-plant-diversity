@@ -5,87 +5,151 @@
 rm(list=ls())
 library(ape)
 library(parallel)
+library(castor)
+library(phytools)
+library(scales)
 source("scripts/functions.R")
 
 # retrieve link tables, phylogenies, and wcsp data (from add_species.R)
 phylo <- read.tree("trees/allmb_matched_added_species_2.tre") 
-wcsp <- readRDS("data/WCSP.apg.rds")  
+#wcsp <- readRDS("data/WCSP_clean.apg.rds")  
 
 # retrieve community matrix (from process_geography.R)
-load("data/comm.RData") # object name = comm
+comm <- readRDS("data/comm.rds") # object name = comm
 
 # stats ######
 # wcsp_acc <- wcsp[wcsp$taxon_status=="Accepted",]
 # table(wcsp_acc$plant_name_id %in% phylo$tip.label)/nrow(wcsp_acc)
 # table(wcsp_acc$plant_name_id %in% phylo$tip.label)
+
+#table(colnames(comm) %in% phylo$tip.label)
+
+####################################################
+# 1. Computing RD #
+####################################################
+
+
+# #### test tree ####
+# keep <- sample(1:length(phylo$tip.label), 100)
+# drop <- 1:length(phylo$tip.label)
+# drop <- drop[-keep]
+# testtree <- drop.tip(phylo,phylo$tip.label[drop])
+# #rm(drop, keep)
 # 
-# table(colnames(comm) %in% phylo$tip.label)
+# plot(testtree, align.tip.label=TRUE, cex=0.6, use.edge.length = FALSE)
+# 
+# 
+# # Get number of edges for each tip and node - remove node counts afterwards
+# ## dist counts the edges, which is equivalent to the number of nodes if you include the root.
+# dist <- get_all_distances_to_root(testtree, as_edge_count=TRUE)
+# plot(testtree, align.tip.label = TRUE)
+# nodelabels(frame="none",adj=c(1.1,-0.4))
+# 
+# # dist[1:Ntip(testtree)] shows tip label edge counts
+# 
+# # combine root distance and tip label
+# dist[1:Ntip(testtree)]
+# res <- data.frame(tip.label = testtree$tip.label, rd = dist[1:Ntip(testtree)])
+# plot(testtree, align.tip.label = TRUE, tip.color = res$rd)
+# RD.testtree <- res
+################################################################################
 
-####################################################
-# 1. Computing tree-level variables (RD and EDGES) #
-####################################################
 
- keep <- sample(1:length(phylo$tip.label), 10000)
- drop <- 1:length(phylo$tip.label)
- drop <- drop[-keep]
- testtree <- drop.tip(phylo,phylo$tip.label[drop])
- rm(drop, keep)
 
-trees <- c("testtree")
 
-# this takes >1h
+#source("scripts/resolve_polytomies.R")
 
-for(i in 1:length(trees)){
-  print(Sys.time())
-  assign(paste0("RD.", trees[i]), unlist(root.distance(get(trees[i]), mc.cores = 4)))
-  #saveRDS(get(paste0("RD.", trees[i])), paste0("RD.", trees[i], ".rds"))
-  print(paste(paste0("RD.", trees[i]), "calculated.", Sys.time()))
+res <- readRDS("data/polytomie_RD_results.rds")
+dist.all <- get_all_distances_to_root(phylo, as_edge_count=TRUE)
+res$org.rd <- dist.all[1:Ntip(phylo)]
 
-  # assign(paste("EDGES.", trees[i], sep=""), mclapply(1:Ntip(get(trees[i])), get_edges, phylo=get(trees[i]), mc.cores=4))
-  # #saveRDS(get(paste("EDGES.", trees[i], sep="")), paste("EDGES.", trees[i], ".rds", sep=""))
-  # print(paste(paste("EDGES.", trees[i], sep=""), "calculated.", Sys.time()))
-}
-rm(i)
+# Correlation of root distance ranges with the former polytomie root distance
+cor.test(res$range, res$org.rd, method="s")
+cor.test(res$mean.rd, res$org.rd, method="s")
+cor.test(res$sd.rd, res$org.rd, method="s")
 
-# 10 000 tip label: 20 seconds for RD, 
-    
+plot(res$range, res$org.rd, col = alpha("black",0.01))
+hist(res$range)
+plot(res$range, res$mean.rd, col = alpha("black",0.01),
+     xlab="Range RD per species",
+     ylab="Mean RD")
+
+
+
 ####################
 # 2. Calculate MRD #
 ####################
 
-# analyses <- cbind(
-#   c("phylo_a_a_a", "phylo_b_a_a"),
-#   c("MATCHES_a_a_a", "MATCHES_b_a_a")
-# )
-# rownames(analyses) <- c("a_a_a", "b_a_a")
-#   
+RD <- res$mean.rd
 # stub function for parallelization
 mrd <- function(i, phylo, RD){
   # take tip labels that are in comm matrix with species occurrences, take the mean of their root distances
+  # subsets the matrix to actual occurrences (=1) and then gets relevant colnames
   MRD <- mean(RD[which(phylo$tip.label %in% phylo$tip.label[phylo$tip.label %in% colnames(comm)[comm[i,] == 1]])])
   return(MRD)
 }
 
-
 # calculate observed MRD
-MRD <- unlist(mclapply(1:nrow(comm), mrd, phylo=testtree, RD=RD.testtree, mc.cores = 4))
-# in the testtree there is NaN , that is normal behaviour
 
+# test
+MRD <- unlist(mclapply(1:nrow(comm), mrd, phylo=testtree, RD=RD.testtree$rd, mc.cores = 4))
+# row 8 produces NaN
+RD.testtree$rd[which(testtree$tip.label %in% testtree$tip.label[testtree$tip.label %in% colnames(comm)[comm[8,] == 1]])]
 
-# calculate randomized MRDs
+## for real
+Sys.time()
+MRD <- unlist(mclapply(1:nrow(comm), mrd, phylo=phylo, RD=RD, mc.cores = 4))
+Sys.time()
+
+# calculate randomized MRDs 
+
 for(i in 1:99){
-  phylo.rnd <- get(trees)
+  phylo.rnd <- phylo
   phylo.rnd$tip.label <- sample(phylo.rnd$tip.label)
-  MRD <- cbind(MRD, unlist(mclapply(1:nrow(comm), mrd, phylo=testtree, RD=RD.testtree, mc.cores = 4)))
+  MRD <- cbind(MRD, unlist(mclapply(1:nrow(comm), mrd, phylo=phylo.rnd, RD=RD, mc.cores = 4)))
   print(paste("replicate", i, "finished"))
 }
 
 colnames(MRD) <- c("obs", paste("rnd.", 1:99, sep=""))
 rownames(MRD) <- rownames(comm)
 
-# this happends on the server now: resolve_polyotmies.R
+saveRDS(MRD, "data/mrd.rds")
 
 
+
+
+
+
+#save.image("phylostruct.RData")
+#save(comm, MRD.a_a_a, MRD.b_a_a, ps_no.a_a_a, ps_no.b_a_a, ps_bl.a_a_a, ps_bl.b_a_a, file="MRD_ps.RData")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# this takes >1h
+
+# for(i in 1:length(trees)){
+#   print(Sys.time())
+#   assign(paste0("RD.", trees[i]), unlist(root.distance(get(trees[i]), mc.cores = 8)))
+#   #saveRDS(get(paste0("RD.", trees[i])), paste0("RD.", trees[i], ".rds"))
+#   print(paste(paste0("RD.", trees[i]), "calculated.", Sys.time()))
+# 
+#   # assign(paste("EDGES.", trees[i], sep=""), mclapply(1:Ntip(get(trees[i])), get_edges, phylo=get(trees[i]), mc.cores=8))
+#   # #saveRDS(get(paste("EDGES.", trees[i], sep="")), paste("EDGES.", trees[i], ".rds", sep=""))
+#   # print(paste(paste("EDGES.", trees[i], sep=""), "calculated.", Sys.time()))
+# }
+# rm(i)
 # 
 # 
 # 
@@ -184,6 +248,3 @@ rownames(MRD) <- rownames(comm)
 # # }
 # # rm(n)
 
-save.image("phylostruct.RData")
-
-save(comm, MRD.a_a_a, MRD.b_a_a, ps_no.a_a_a, ps_no.b_a_a, ps_bl.a_a_a, ps_bl.b_a_a, file="MRD_ps.RData")
