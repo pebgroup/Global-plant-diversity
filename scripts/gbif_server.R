@@ -11,9 +11,11 @@
     #test <- name_usage(datasetKey = "d7dddbf4-2cf0-4f39-9b2a-bb099caae36c", limit = 10000)$data
     #View(test)
     
-    
-    sb <- readRDS("SB_tip_labels.rds")
-    ids <- sb$gbif_id
+    # DEFINE HERE TAXA YOU WANT TO DOWNLOAD (via gbif ID)
+    sb <- read.csv("../Teaching/jeppe/taxonKeys_jeppe.csv")
+    ids <- sb$taxonID
+    #sb <- readRDS("SB_tip_labels.rds")
+    #ids <- sb$gbif_id
     res <- list()
     for(i in 1:length(ids)){
       tryCatch({q
@@ -21,6 +23,6 @@
       if(!i%%10)cat(i,"\r")
       # include failsafe
       if(i %in% c(50000, 100000, 150000, 200000)){saveRDS(res, "gbif.rds")}
-      if(i==length(ids)){saveRDS(res, "gbif_all.rds")}
+      if(i==length(ids)){saveRDS(res, "gbif_jeppe.rds")}
       }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
     }

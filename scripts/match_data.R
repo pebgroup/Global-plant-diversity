@@ -52,7 +52,7 @@ rm(ott)
 # check sources for the tip labels
 table(grepl("gbif", ott_sub$sourceinfo))/nrow(ott_sub)
 table(grepl("ncbi", ott_sub$sourceinfo))/nrow(ott_sub)
-table(grepl("ncbi|gbif", ott_sub$sourceinfo))/nrow(ott_sub)
+table(grepl("ncbi|gbif", ott_sub$sourceinfo))/nrow(ott_sub) # covers almost every entry
 table(grepl("ncbi.*gbif|gbif.*ncbi", ott_sub$sourceinfo))/nrow(ott_sub)
 
 
@@ -81,7 +81,7 @@ matches <- matches[,c(tax_level, "id")]
 
 ott_ncbi <- merge(ott_ncbi, matches, 
              by.x="ncbi_id", by.y="id", all.x=TRUE)
-table(is.na(ott_ncbi$elevated_to_species_id)) / nrow(ott_ncbi) # 85% matches for ncbi tip labels
+table(is.na(ott_ncbi$elevated_to_species_id)) / nrow(ott_ncbi) # 85.2% matches for ncbi tip labels (did not change from wcsp version dec19 to jun20)
 
 ## merge into fin
 fin <- merge(fin, ott_ncbi[,c("name", "ncbi_id", tax_level)], 
@@ -109,14 +109,14 @@ fin <- merge(fin, ott_gbif[,c("name", "gbif_id")],
 
 
 ## Load taxonomy matcher created GBIF tip labels #################################################### 
-# data/fin_GBIF.rds.rds
+#matches_old <- readRDS("data/fin_species_match_GBIF_backup_file_from_may.rds")
 matches <- readRDS("data/fin_species_match_GBIF.rds")
 matches$elevated_to_species_id[which(is.na(matches$elevated_to_species_id))] <- matches$accepted_plant_name_id[which(is.na(matches$elevated_to_species_id))]
-#matches <- matches[,c(tax_level, "id")]
+matches <- matches[,c(tax_level, "taxon_name")]
 
 # merge the GBIF accepted name IDS into fin
-fin <- merge(fin, matches[,c("tip", tax_level)],
-              by.x="tips_mod", by.y="tip", all.x=TRUE)
+fin <- merge(fin, matches[,c("taxon_name", tax_level)],
+              by.x="tips_mod", by.y="taxon_name", all.x=TRUE)
 rm(matches)
 
 
@@ -131,17 +131,21 @@ fin[is.na(fin[,col_merge[1]]),col_merge[1]] <- fin[is.na(fin[,col_merge[1]]),col
 fin <- fin[,-col_merge[2]]
 names(fin)[grep(tax_level, names(fin))] <- "accepted_id"
 
-table(is.na(fin$accepted_id))/nrow(fin) # 85% matches total
+table(is.na(fin$accepted_id))/nrow(fin) # 84.48% matches total
 
 
-table(is.na(fin$accepted_id[fin$source=="ncbi"]))/nrow(fin[fin$source=="ncbi",]) # 85%
-table(is.na(fin$accepted_id[fin$source=="gbif"]))/nrow(fin[fin$source=="gbif",]) # 84%
+table(is.na(fin$accepted_id[fin$source=="ncbi"]))/nrow(fin[fin$source=="ncbi",]) # 85.2%
+table(is.na(fin$accepted_id[fin$source=="gbif"]))/nrow(fin[fin$source=="gbif",]) # 84.1%
 
-
-wcsp <- readRDS("data/WCSP_clean.apg.rds")
+# should be all accepted
+wcsp <- readRDS("data/apg_wcp_jun_20_clean.rds")
 wcsp <- wcsp[wcsp$plant_name_id %in% fin$accepted_id,]
 table(wcsp$taxon_status)
-# should be all accepted
+
+if(all(wcsp$taxon_status=="Accepted")){print("All is well")
+}else{stop("There are non-accepted taxa in the tip labels!")}  
+
+
 
 
 
@@ -159,7 +163,6 @@ length(which(table(phylo$tip.label)>1)) # 20089 duplicated tip labels (differs b
 # load genbank only tree:
 phylogb_a <- read.tree("trees/GBMB.tre") # Magallon
 phylogb_b <- read.tree("trees/GBOTB.tre") # Opentree
-wcsp <- readRDS("data/WCSP.apg.rds") # WCSP
 
 resolve_multiple <- function(MATCHES, wcsp, phylo, phylo_org, phylogb){
     # matches = accepted WCSP ID tip labels, phylo=phylogeny with labels replaced, phylo_org=original tip labels
@@ -204,7 +207,7 @@ resolve_multiple <- function(MATCHES, wcsp, phylo, phylo_org, phylogb){
 
 # 20 MINUTES ###
 res_multi <- resolve_multiple(phylo$tip.label, wcsp, phylo, phylo_org, phylogb_a) 
-table(is.na(res_multi)) # 84 479 NAs introduced
+table(is.na(res_multi)) # 84 732 NAs introduced
   
   
   

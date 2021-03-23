@@ -73,7 +73,7 @@ library(phytools)
 library(tidyverse)
 
 phylo <- read.tree("trees/allmb_matched_no_multi.tre")
-wcsp <- readRDS("data/WCSP_clean.apg.rds")
+wcsp <- readRDS("data/apg_wcp_jun_20_clean.rds")
 wcsp <- wcsp %>% select(-family) %>%
   rename("family" = "family.apg")
 
@@ -172,7 +172,7 @@ for(i in 1:nrow(toadd)){
   if(length(tips) == 1){ # if adding to a terminal branch
     nn <- which(phylo$tip.label == tips)
     #len <- phylo$edge.length[phylo$tip.label==tips] # add same length as terminal branch  
-    phylo <- bind.tip2(phylo, newname, where = nn,
+    phylo <- bind.tip2(phylo, as.character(newname), where = nn,
                          position = 0.5 * phylo$edge.length[which(phylo$edge[, 2] == nn)],
                          edge.length = 0.5 * phylo$edge.length[which(phylo$edge[, 2] == nn)])
   } else { # if adding to an internal node  
@@ -187,4 +187,4 @@ for(i in 1:nrow(toadd)){
 }
 
 saveRDS(taxa_not_added, "taxa_not_added_2.rds")
-write.tree(phylo, "allmb_matched_added_species_2.tre")
+write.tree(phylo, "allmb_matched_added_species_Nov20.tre")

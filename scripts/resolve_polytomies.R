@@ -7,14 +7,15 @@ library(phytools)
 library(parallel)
 
 # n=20 takes 20 minutes. 4 parallel cores take 70seconds for 4 runs --> 30 minutes for 100 runs
+# running on server with 16 cores 1000 reps: 70min
 
 
-phylo <- read.tree("trees/allmb_matched_added_species_2.tre") 
+phylo <- read.tree("trees/allmb_matched_added_species_Nov20.tre") 
 
 
 ## GO
 # increase numbers when ready to go    
-reps <- 1000
+reps <- 2
 res <- matrix(ncol=length(phylo$tip.label), nrow=reps)
 Sys.time()
 # for(i in 1:reps){
@@ -46,9 +47,20 @@ res <- data.frame(mean.rd = colMeans(output),
 
 
 saveRDS(res, "polytomie_RD_results.rds")
+#res <- readRDS("data/polytomie_RD_results.rds")
 
-# 
-# # analysis polytomie splits
+# polytomies error bigger than the diffs in root distance between countries?
+hist(res$mean.rd)
+hist(res$range)
+plot(res$mean.rd~res$range, main="polytomie summary mean~range")
+plot(res$mean.rd~res$sd.rd, main="polytomie summary mean~sd")
+
+hist(res$sd.rd / res$mean.rd)
+mean(res$sd.rd / res$mean.rd)
+
+
+
+# analysis polytomie splits
 # hist(apply(output, 2, sd))
 # hist(apply(output, 2, range))
 # hist(apply(output, 2, mean))

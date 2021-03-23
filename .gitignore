@@ -1,4 +1,4 @@
-.html
+*.html
 *.rds
 *.csv
 *.Rproj
@@ -10,10 +10,14 @@
 *.txt
 *.odt
 *.tre
+*.png
+*.graphml
+*.docx
+*.pdf
 .Rproj.user/
 data/
 literature/
 old_stuff/
-results/
 shapefile/
+
 

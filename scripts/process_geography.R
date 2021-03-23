@@ -1,4 +1,4 @@
-
+rm(list=ls())
 library(rgdal)
 library(data.table)
 
@@ -8,8 +8,7 @@ library(data.table)
 #unpublished <- fread("data/unpublished_names_19_10_2018.csv", header=TRUE, sep="|")
 #wcsp <- rbind(published,unpublished)
 #rm(published, unpublished)
-wcsp <- readRDS("data/WCSP_clean.apg.rds")
-#wcsp <- readRDS("data/wcp_dec_19.rds")
+wcsp <- readRDS("data/apg_wcp_jun_20_clean.rds")
 
 # SWITCH
 
@@ -18,15 +17,26 @@ wcsp <- readRDS("data/WCSP_clean.apg.rds")
 # Carex longi wcs-228268 acepted ssp in wcsp old, not in wcsp new
 
 #read distributions 
-fread("data/published_distribution_19_10_2018.csv", header=TRUE, sep="|") -> published
-fread("data/unpublished_distribution_19_10_2018.csv", header=TRUE, sep="|") -> unpublished
-dist <- rbind(published,unpublished)
-rm(published, unpublished)
-#dist <- readRDS("data/dist.rds")
-dist = dist[dist$introduced==0 & dist$extinct==0,] #remove introduced and extinct records
+#fread("data/published_distribution_19_10_2018.csv", header=TRUE, sep="|") -> published
+#fread("data/unpublished_distribution_19_10_2018.csv", header=TRUE, sep="|") -> unpublished
+#dist_old <- rbind(published,unpublished)
+#rm(published, unpublished)
+#dist_old <- readRDS("data/dist.rds")
+dist <- fread("data/wcs_jun_20/world_checklist_names_and_distribution_jun_2020/checklist_distribution.txt")
+# comments version diff december2019 / june2020: checklist_Id is now named plant_name_id, additional "location doubtful" column
+#phylo <- read.tree("trees/allmb_matched_added_species_Nov20.tre") # allmb_matched_added_species_3.tre
+
+
+
+dist = dist[dist$introduced==0,] #remove introduced and extinct records
 dist$area_code_l3 = toupper(dist$area_code_l3)
 
 shape = readOGR(dsn = "shapefile", layer = "level3")
+
+# remove ferns + moss
+ferns <- as.vector(read.csv("data/fern_list.txt")[,1])
+wcsp <- wcsp[!wcsp$family %in% ferns,]
+wcsp <- wcsp[!wcsp$family %in% "Isoetaceae",] # special character thing
 
 if("genus_hybrid_marker" %in% names (wcsp)){
   goodspp = wcsp[wcsp$genus_hybrid_marker == "" & 
@@ -43,34 +53,43 @@ if("genus_hybrid_marker" %in% names (wcsp)){
   
 }
 
+nrow(goodspp) # now check with adding species script 
+
+#fernsruinedmyday
+
 
 
 
 
 
 # compatibility old and new checklist ###################################################
-# distribution data is older than the checklist version, check names
 
-# remove non matching species from distribution data
-## create old ID format
-id_split <- strsplit(as.character(dist$checklist_id), "-")
-source <- sapply(id_split, "[[", 1)
-source[source=="atoz"] <- "az"
-inverse_ID <- paste(sapply(id_split, "[[", 2), source, sep="-")
-dist$checklist_id_inverse <- inverse_ID
+# -----------------------------------------------------------#
+##### This part should be obsolete with the new download #####
+# -----------------------------------------------------------#
 
-# check excluded species
-length(which(!dist$checklist_id_inverse %in% wcsp$plant_name_id))  # 2836
-length(which(!dist$checklist_id %in% wcsp$checklist_id)) # 33
-sort(table(dist$area_code_l3[which(!dist$checklist_id_inverse %in% wcsp$plant_name_id)]))
-
-if("genus_hybrid_marker" %in% names (wcsp)){
-  dist <- dist[-which(!dist$checklist_id %in% wcsp$checklist_id),]
-}else{
-  dist <- dist[-which(!dist$checklist_id_inverse %in% wcsp$plant_name_id),]
-}
-
-rm(list = c("id_split", "inverse_ID", "source"))
+# # distribution data is older than the checklist version, check names
+# 
+# # remove non matching species from distribution data
+# ## create old ID format
+# id_split <- strsplit(as.character(dist$checklist_id), "-")
+# source <- sapply(id_split, "[[", 1)
+# source[source=="atoz"] <- "az"
+# inverse_ID <- paste(sapply(id_split, "[[", 2), source, sep="-")
+# dist$checklist_id_inverse <- inverse_ID
+# 
+# # check excluded species
+# length(which(!dist$checklist_id_inverse %in% wcsp$plant_name_id))  # 2836
+# length(which(!dist$checklist_id %in% wcsp$checklist_id)) # 33
+# sort(table(dist$area_code_l3[which(!dist$checklist_id_inverse %in% wcsp$plant_name_id)]))
+# 
+# if("genus_hybrid_marker" %in% names (wcsp)){
+#   dist <- dist[-which(!dist$checklist_id %in% wcsp$checklist_id),]
+# }else{
+#   dist <- dist[-which(!dist$checklist_id_inverse %in% wcsp$plant_name_id),]
+# }
+# 
+# rm(list = c("id_split", "inverse_ID", "source"))
 
 
 #######################################################################################
@@ -98,16 +117,16 @@ dist = dist[dist$area_code_l3 %in% rownames(comm),]
 # synonymise distributions table by adding accepted_plant_id column
 if("genus_hybrid_marker" %in% names (wcsp)){
   accids = wcsp$accepted_name_id
-  names(accids) = wcsp$checklist_id
-  dist$accepted_name_id = accids[as.vector(dist$checklist_id)]
+  names(accids) = wcsp$plant_name_id
+  dist$accepted_name_id = accids[as.vector(dist$plant_name_id)]
   dist$accepted_name_id = as.vector(dist$accepted_name_id)
   table(dist$accepted_name_id=="") # 10 586 occurrence records have no accepted plant id
 }else{
   accids = wcsp$accepted_plant_name_id # accepted names
   names(accids) = wcsp$plant_name_id # synonyms etc are name of each entry
-  dist$accepted_name_id = accids[as.vector(dist$checklist_id_inverse)]
+  dist$accepted_name_id = accids[as.vector(dist$plant_name_id)]
   dist$accepted_name_id = as.vector(dist$accepted_name_id)
-  table(dist$accepted_name_id=="") # 10 170 occurrence records have no accepted plant id
+  table(dist$accepted_name_id=="") # 11 936 (old version: 10 170) occurrence records have no accepted plant id
 }
 
 rm(accids)
@@ -139,8 +158,8 @@ for(i in 1:nrow(dist)){
 rm(i)
 Sys.time()
 
-
-saveRDS(comm, file="data/comm.rds")
+saveRDS(comm, file="data/comm_Feb2021.rds")
+# saveRDS(comm, file="data/comm_Nov2020.rds")
 #saveRDS(comm, file="data/comm_old_wcsp.rds")
 
 
@@ -148,7 +167,7 @@ saveRDS(comm, file="data/comm.rds")
 
 
 
-
+#comm <- readRDS("data/comm.rds")
 
 
 

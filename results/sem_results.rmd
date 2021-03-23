@@ -1,0 +1,328 @@
+---
+title: "SEM_results"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(lavaan)
+library(semPlot)
+source("../scripts/clean_semplot_functions.R") # script for modified plotting functions
+
+load("../data/brute_force_models.RData")
+```
+
+# Model fitting
+Models are assembled from a set of fixed and varying regressions and variables. 
+
+1. Fixed SR regression part: sr_trans ~ soil + sub_trop_mbf + area + mrd
+2. Fixed MRD regression part: mrd ~ pre_m + sea_m
+3. additional SR variables:  sub_trop_dbf,  pre_sd, mont_gs , pre_m, sea_sd, tra_m, mat_m ,tra_sd, mat_sd , sea_m
+4. additional MRD variables: tra_m, sea_sd, soil , tri, tra_sd , pre_sd , pet_m, mat_m , area, mat_sd
+
+Indirect paths were added in case the respective variable was included in the model. They are included to account for the correlation of the respective variables and their indirect effects.
+
+1. soil ~ area
+2. sea_sd ~ area
+3. tra_sd ~ area
+4. sub_trop_mbf ~ pre_m + tra_m + pet_m
+
+All possible combinations (`r nrow(fit2)`)were run and stats collected.
+
+# Model selection
+Starting models were selected based on different criteria:
+
+* highest CFI
+* lowest RMSEA
+* lowest AIC
+* highest combined R^2
+* from a set of models that have okish fits (CFI>0.9, RMSEA<0.12):
+  + lowest AIC
+  + model with max variables from models within a 2point range from lowest AIC
+  + max number of variables
+
+To improve initial model fit, all models have been adjusted by including additional, meaningful paths as suggested by the modificationindices() lavaan function.
+
+_____
+CHANGES: 
+
+* the TRF regression now includes MAT instead of PET: higher R^2, avoidance of multicolinearity, better overall model performance than with PET.
+* all models have been checked for multicolinearity (PET and MAT). 
+* the maximum Variables model is really good
+
+
+```{r data, echo=FALSE}
+good_models <- list(best_cfi.fit.mod2, best_rmsea.fit.mod2, best_global_aic.mod.fit3, max.r2.fit.mod2,
+                    best_abs_aic.fit.mod2, best_aic.fit.mod3, max.var.mod.fit.mod5)
+model_names <- c("lowest RMSEA:", "highest CFI:", "lowest AIC:", "max R^2:",
+                 "best AIC, good fit", "low AIC, good fit, max var:", "max Var, good fit:")
+```
+
+# Best CFI, RMSEA, Rsquared and AIC
+The lowest AIC model is stuck with bad fit.
+
+```{r plots, fig.width=9, fig.height=9}
+par(mfrow=c(2,2))
+model <- good_models[[1]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("A) ", model_names[1], mod.stats), cex.main=1)
+model <- good_models[[2]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("B) ", model_names[2], mod.stats), cex.main=1)
+model <- good_models[[3]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("C) ", model_names[3], mod.stats), cex.main=1)
+model <- good_models[[4]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("D) ", model_names[4], mod.stats), cex.main=1)
+
+```
+
+# Filtered for good fit first (CFI>0.9, RMSEA<0.12): lowest AIC, low AIC + max variables, max variables
+B) is the model we agreed on last time (but without the pet_m --> SR connection to avoid multicolinearity), C) however is really good too and has almost everything connected, which just shows more.
+
+```{r plots2, fig.width=9, fig.height=9}
+par(mfrow=c(2,2))
+model <- good_models[[5]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("A) ", model_names[5], mod.stats), cex.main=1)
+model <- good_models[[6]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("B) ", model_names[6], mod.stats), cex.main=1)
+model <- good_models[[7]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("C) ", model_names[7], mod.stats), cex.main=1)
+
+```
+
+
+# Model stats 2B
+```{r}
+summary(good_models[[6]], standardized = TRUE, fit.measures=TRUE, rsq=TRUE)
+```
+
+# Model stats 2C
+```{r}
+summary(good_models[[7]], standardized = TRUE, fit.measures=TRUE, rsq=TRUE)
+```
+
+
+# Calculate indirect effects
+## Model 2B
+```{r}
+good_models[[6]]@call
+cat(best_aic_mod3)
+b2 <- "
+sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + m*mrd + ms*mont_gs + t*tra_m + m*mat_m + sea_m
+mrd ~ pre_m + sea_m + tra_m+soil+pet_m+a3*area+sub_trop_mbf
+soil ~ a1*area + ms1*mont_gs
+sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area
+
+# indirect paths on SR
+area_ind := a1*s + a2*trf
+area_total := a + a1*s + a2*trf
+mont_gs_ind := ms1*ms
+mont_gs_total := ms1*ms + ms
+pre_m_ind := p1*trf
+tra_m_ind := t1*trf
+tra_m_total := t1*trf + t
+mat_m_ind := m1*trf
+mat_m_total :=  m1*trf + m
+"
+
+b2.fit <- sem(b2, data = dat_no.na, estimator="MLM")
+summary(b2.fit, standardized = TRUE)
+```
+
+## Model 2C
+```{r}
+good_models[[7]]@call
+cat(max.var.mod_mod5)
+c2 <- "
+sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + m*mat_m + sea_m + p*pre_m + tr0*tri
+mrd ~ pre_m + sea_m + tra_m + soil + tri + pet_m + a3*area + sub_trop_mbf
+soil ~ a1*area + ms1*mont_gs
+sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area + tr1*tri
+
+# indirect paths on SR
+area_dir := a
+area_ind := a1*s + a2*trf
+area_total := a + a1*s + a2*trf
+mont_gs_dir := ms
+mont_gs_ind := ms1*ms
+mont_gs_total := ms1*ms + ms
+pre_m_dir := p
+pre_m_ind := p1*trf
+pre_m_total := p1*trf + p
+tra_m_dir := t
+tra_m_ind := t1*trf
+tra_m_total := t1*trf + t
+mat_m_dir :=  m
+mat_m_ind := m1*trf
+mat_m_total :=  m1*trf + m
+tri_dir := tr0
+tri_ind := tr1*trf
+tri_total := tr1*trf + tr0
+"
+
+c2.fit <- sem(c2, data = dat_no.na, estimator="MLM")
+summary(c2.fit, standardized = TRUE)
+```
+
+# Results
+
+* Area effect on SR is mostly via soil, very little direct
+* mont_gs are insignificant, if there was an effect it would be direct
+* pre has a positive effect via rain forest, the direct effect is not significant
+* tra might have an effect via TRF, however insignificant
+* mat has a positive effect via TRF
+* tri
+
+```{r visualization stuff, include=FALSE}
+res <- parameterestimates(c2.fit, standardized = TRUE, boot.ci.type = "bca.simple")
+reg.coef <- res[res$op=="~",]
+reg.coef.sig <- reg.coef[reg.coef$pvalue<=0.5,]
+reg.coef.ns <- reg.coef[reg.coef$pvalue>0.5,]
+plot(sort(reg.coef.sig$std.all))
+abline(h=c(0,0.2,0.4,-0.2))
+k5 <- kmeans(sort(reg.coef.sig$std.all), centers = 5)
+plot(sort(reg.coef.sig$std.all), col=k5$cluster, pch=20)
+k3 <- kmeans(sort(abs(reg.coef.sig$std.all)), centers = 3)
+plot(sort(abs(reg.coef.sig$std.all)), col=k3$cluster, pch=20)
+#limits: <-0.2, -0.2-0, 0-0.2, 0.2-0.4, <0.5
+# == 3 strength groups: 0 - 0.2 , 0.2 - 0.5, >0.5
+
+# sorting path coefficients
+reg.coef.sig[order(abs(reg.coef.sig$std.all)),]
+reg.coef.ns[order(abs(reg.coef.ns$std.all)),]
+
+reg.coef[order(reg.coef$lhs, reg.coef$rhs),] # grouped for regression + alphabetical variables
+
+# plotting tests
+semPaths(object = c2.fit, layout = "tree", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(c2.fit))
+mod.stats <- paste(round(fitmeasures(c2.fit, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste(mod.stats), cex.main=1)
+
+```
+
+
+
+```{r SEM_table_results}
+pres <- reg.coef[order(reg.coef$lhs, reg.coef$rhs),c("lhs", "op", "rhs", "std.all", "se", "ci.lower", "ci.upper", "pvalue")] # grouped for regression + alphabetical variables
+pres[,c(4:7)] <- round(pres[,c(4:7)],2)
+pres[,c(8)] <- round(pres[,c(8)],3)
+pres[order(pres$lhs, abs(pres$std.all)),]
+
+# from documentation: standardized = TRUE: Logical. If TRUE, standardized estimates are added to the output. Note that SEs and tests are still based on unstandardized estimates. Use standardizedSolution to obtain SEs and test statistics for standardized estimates.... ok great... replace SEs and CIs
+```
+
+
+
+```{r}
+pres2 <- standardizedSolution(c2.fit)
+pres2 <- pres2[pres2$op=="~",-6]
+pres2[,c(4,5,7,8)] <- round(pres2[,c(c(4,5,7,8))],2)
+pres2[,c(6)] <- round(pres2[,c(c(6))],3)
+pres2[order(pres2$lhs, abs(pres2$est.std)),]
+```
+
+
+
+
+
+## Model 2C with corrected SR and MRD data
+```{r}
+c2 <- "
+sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + m*mat_m + sea_m + p*pre_m + tr0*tri
+mrd ~ pre_m + sea_m + tra_m + soil + tri + pet_m + a3*area + sub_trop_mbf
+soil ~ a1*area + ms1*mont_gs
+sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area + tr1*tri
+
+# indirect paths on SR
+area_dir := a
+area_ind := a1*s + a2*trf
+area_total := a + a1*s + a2*trf
+mont_gs_dir := ms
+mont_gs_ind := ms1*ms
+mont_gs_total := ms1*ms + ms
+pre_m_dir := p
+pre_m_ind := p1*trf
+pre_m_total := p1*trf + p
+tra_m_dir := t
+tra_m_ind := t1*trf
+tra_m_total := t1*trf + t
+mat_m_dir :=  m
+mat_m_ind := m1*trf
+mat_m_total :=  m1*trf + m
+tri_dir := tr0
+tri_ind := tr1*trf
+tri_total := tr1*trf + tr0
+"
+
+dat_noferns <- readRDS("data/sem_input_data_noferns.rds")
+c2.fit.noferns <- sem(c2, data = dat_noferns, estimator="MLM")
+summary(c2.fit.noferns, standardized = TRUE)
+
+semPaths(object = c2.fit.noferns, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(c2.fit.noferns))
+mod.stats <- paste(round(fitmeasures(c2.fit.noferns, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste(mod.stats), cex.main=1)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

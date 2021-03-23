@@ -7,7 +7,7 @@ library(phytools)
 library(dplyr)
 
 phylo <- read.tree("trees/allmb_matched_no_multi.tre")
-wcsp <- readRDS("data/WCSP_clean.apg.rds")
+wcsp <- readRDS("data/apg_wcp_jun_20_clean.rds")
 wcsp <- wcsp %>% 
   select(-family) %>%
   rename(family = family.apg)
@@ -52,7 +52,7 @@ lefties <- families[which(!families %in% fams_in_tree)]
 # the weirdos... monospecific families e.g.
 lefties[which(lefties %in% unresolved_families)]
 nrow(goodspp[goodspp$family %in% lefties,])
-# 31 species cannot be added
+# 6 species cannot be added
 
 
 
@@ -181,11 +181,11 @@ max(nodeHeights(phylo))
 
 #### CHECK SERVER RESULTS ##############################################################################
 
-fin_tree <- read.tree("trees/allmb_matched_added_species.tre")
-fin_tree2 <- read.tree("trees/allmb_matched_added_species_2.tre")
+#fin_tree <- read.tree("trees/allmb_matched_added_species.tre")
+fin_tree2 <- read.tree("trees/allmb_matched_added_species_Nov20.tre")
 
-er <- readRDS("data/taxa_not_added.rds")
-er2 <- readRDS("data/taxa_not_added_2.rds")
+#er <- readRDS("data/taxa_not_added.rds")
+er2 <- readRDS("data/taxa_not_added_Nov20.rds")
 
 setdiff(er, er2)
 all(er2 %in% er)
@@ -195,9 +195,9 @@ phylo <- read.tree("trees/allmb_matched_no_multi.tre")
 # wcsp <- wcsp %>% select(-family) %>%
 #   rename("family" = "family.apg")
 
-length(fin_tree$tip.label)-length(phylo$tip.label)
+#length(fin_tree$tip.label)-length(phylo$tip.label)
 length(fin_tree2$tip.label)-length(phylo$tip.label)
-any(duplicated(fin_tree$tip.label))
+#any(duplicated(fin_tree$tip.label))
 any(duplicated(fin_tree2$tip.label))
 
 #View(wcsp[wcsp$plant_name_id %in% er,]) # Osmundaceae = fern
@@ -210,16 +210,16 @@ table(fin_tree2$edge.length<0)
 
 #fin_tree$edge[which(fin_tree$edge.length<0)]
 
-# 34 species not added
+# 1 species not added
 
-plot(fin_tree, "fan", show.tip.label = FALSE)
+#plot(fin_tree, "fan", show.tip.label = FALSE)
 plot(fin_tree2, "fan", show.tip.label = FALSE)
 
 library(castor)
 dist.phylo <- get_all_distances_to_root(phylo, as_edge_count=FALSE)
-dist <- get_all_distances_to_root(fin_tree, as_edge_count=FALSE)
+#dist <- get_all_distances_to_root(fin_tree, as_edge_count=FALSE)
 dist2 <- get_all_distances_to_root(fin_tree2, as_edge_count=FALSE)
-hist(dist[1:Ntip(fin_tree)])
+#hist(dist[1:Ntip(fin_tree)])
 hist(dist.phylo[1:Ntip(phylo)])
 hist(dist2[1:Ntip(fin_tree2)])
 
@@ -257,9 +257,112 @@ nrow(phylo.dat.org)
 table(phylo.dat.org$taxon_status)
 
 ## There is some non- accepted species in the Smith&Brown matched version.
-table(phylo.dat.org$taxon_rank, phylo.dat.org$taxon_status)
+#table(phylo.dat.org$taxon_rank, phylo.dat.org$taxon_status)
 
 
+
+
+
+
+
+
+
+
+
+## There is this issue that some species should have been added, but they do not appear in the tree, namely almost 1000 Asteraceae. Find out what happens
+phylo <- read.tree("trees/allmb_matched_no_multi.tre")
+tree <- read.tree("trees/allmb_matched_added_species_2.tre")
+tree <- read.tree("allmb_matched_added_species_3.tre")
+wcsp <- readRDS("data/WCSP_clean.apg.rds")
+wcsp <- wcsp %>% 
+  select(-family) %>%
+  rename(family = family.apg)
+
+# remove ferns + moss
+ferns <- as.vector(read.csv("data/fern_list.txt")[,1])
+wcsp <- wcsp[!wcsp$family %in% ferns,]
+wcsp <- wcsp[!wcsp$family %in% "Isoetaceae",] # special character thing
+
+
+# get list of all accepted species
+goodspp <- wcsp[wcsp$genus_hybrid == "" &
+                  wcsp$species_hybrid == "" &
+                  wcsp$infraspecific_rank == "" &
+                  wcsp$species != "" &
+                  wcsp$taxon_status == "Accepted",]
+nrow(goodspp) # 328.468 good species in WCSP
+
+toadd <- goodspp[!goodspp$plant_name_id %in% phylo$tip.label,]
+nrow(toadd) # add 56.952 species
+
+length(phylo$tip.label) # 271.774 species before adding
+length(tree$tip.label) # 328.700 after adding
+length(tree$tip.label) - length(phylo$tip.label) # 56.926 added
+
+table(toadd$plant_name_id %in% tree$tip.label) # 3225 species not in final tree. ? 
+missing <- toadd$plant_name_id[!toadd$plant_name_id %in% tree$tip.label]
+sort(table(wcsp$family[wcsp$plant_name_id %in% missing])) # families of missing species
+
+added <- tree$tip.label[which(!tree$tip.label %in% phylo$tip.label)] 
+table(missing %in% added)
+table(added %in% missing)
+table(missing %in% toadd$plant_name_id)
+
+# missing species are in the toadd species list, but not in the result tree.
+## the discrepancy between before and after tree is only ~30 species though - how is that possible
+table(tree$tip.label %in% phylo$tip.label) # added species are there
+table(phylo$tip.label %in% tree$tip.label) # no old species are getting omitted
+
+# --> is there some fake species in the tree????
+
+all(added %in% toadd$plant_name_id) # that should be true!
+table(added %in% wcsp$plant_name_id) # there is species that do not exist in the tree instead of right ones, wtf
+table(tree$tip.label %in% wcsp$plant_name_id)
+
+(wrong <- added[which(!added %in% toadd$plant_name_id)])
+# those are not checklist IDs, what the hell
+length(which(!added %in% toadd$plant_name_id)) # exact number as missing ones.....
+
+# IT`S another factor character issue....
+a <- c("test")
+b <- c(a, missing)
+b <- b[-1]
+table(b %in% wrong)
+
+fac <- data.frame(b, missing)
+tips <- tree$tip.label
+replace_these <- which(tips %in% fac$b)
+
+for(i in 1:length(replace_these)){
+    tips[replace_these[i]] <- as.character(fac$missing[which(fac$b==tips[replace_these[i]])])
+}
+
+table(tree$tip.label == tips)
+tree.fix <- tree
+tree.fix$tip.label <- tips
+
+table(toadd$plant_name_id %in% tree.fix$tip.label)
+
+write.tree(tree.fix, "trees/allmb_matched_added_species_2_qd_fix.tre")
+
+
+
+
+
+
+sub <- keep.tip(tree, sample(tree$tip.label,1000))
+trait <- as.numeric(rnorm(1000, mean = 1, sd=1)>1)
+trait[which(trait==0)] <- 2
+sub$tip.label <- rep("-", length(sub$tip.label))
+#names(trait) <- sub$tip.label
+plot(sub, type="fan", cex=4, tip.color = c("green", "white")[trait])
+
+
+
+trait <- as.numeric(rnorm(length(tree$tip.label), mean = 1, sd=1)>1)
+trait[which(trait==0)] <- 2
+tree$tip.label <- rep("---", length(tree$tip.label))
+plot(tree, type="fan", cex=1, tip.color = c("green", "white")[trait], label.offset = 2)
 
 
 

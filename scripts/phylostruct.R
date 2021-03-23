@@ -11,18 +11,19 @@ library(scales)
 source("scripts/functions.R")
 
 # retrieve link tables, phylogenies, and wcsp data (from add_species.R)
-phylo <- read.tree("trees/allmb_matched_added_species_2.tre") 
-#wcsp <- readRDS("data/WCSP_clean.apg.rds")  
+phylo <- read.tree("trees/allmb_matched_added_species_Nov20.tre") 
 
 # retrieve community matrix (from process_geography.R)
-comm <- readRDS("data/comm.rds") # object name = comm
+comm <- readRDS("data/comm_Feb2021.rds") # object name = comm # use new one
 
 # stats ######
 # wcsp_acc <- wcsp[wcsp$taxon_status=="Accepted",]
 # table(wcsp_acc$plant_name_id %in% phylo$tip.label)/nrow(wcsp_acc)
 # table(wcsp_acc$plant_name_id %in% phylo$tip.label)
 
-#table(colnames(comm) %in% phylo$tip.label)
+table(colnames(comm) %in% phylo$tip.label)
+colnames(comm)[!colnames(comm) %in% phylo$tip.label]
+# "385449-wcs" is not in the tree: Lorales - Gomortegaceae - Gormortega: monotypic family, not included in tree is according to protocol
 
 ####################################################
 # 1. Computing RD #
@@ -59,7 +60,7 @@ comm <- readRDS("data/comm.rds") # object name = comm
 
 #source("scripts/resolve_polytomies.R")
 
-res <- readRDS("data/polytomie_RD_results.rds")
+res <- readRDS("data/polytomie_RD_results_Nov20.rds")
 dist.all <- get_all_distances_to_root(phylo, as_edge_count=TRUE)
 res$org.rd <- dist.all[1:Ntip(phylo)]
 
@@ -92,9 +93,9 @@ mrd <- function(i, phylo, RD){
 # calculate observed MRD
 
 # test
-MRD <- unlist(mclapply(1:nrow(comm), mrd, phylo=testtree, RD=RD.testtree$rd, mc.cores = 4))
+#MRD <- unlist(mclapply(1:nrow(comm), mrd, phylo=testtree, RD=RD.testtree$rd, mc.cores = 4))
 # row 8 produces NaN
-RD.testtree$rd[which(testtree$tip.label %in% testtree$tip.label[testtree$tip.label %in% colnames(comm)[comm[8,] == 1]])]
+#RD.testtree$rd[which(testtree$tip.label %in% testtree$tip.label[testtree$tip.label %in% colnames(comm)[comm[8,] == 1]])]
 
 ## for real
 Sys.time()
@@ -103,25 +104,30 @@ Sys.time()
 
 # calculate randomized MRDs 
 
+Sys.time()
 for(i in 1:99){
   phylo.rnd <- phylo
   phylo.rnd$tip.label <- sample(phylo.rnd$tip.label)
   MRD <- cbind(MRD, unlist(mclapply(1:nrow(comm), mrd, phylo=phylo.rnd, RD=RD, mc.cores = 4)))
   print(paste("replicate", i, "finished"))
 }
+Sys.time()
 
 colnames(MRD) <- c("obs", paste("rnd.", 1:99, sep=""))
 rownames(MRD) <- rownames(comm)
 
-saveRDS(MRD, "data/mrd.rds")
+saveRDS(MRD, "data/mrd_Nov2020.rds")
 
 
-
-
+# compare to old mrd that included ferns:
+mrd_old <- readRDS("data/mrd_Nov2020.rds")
+mrd_new <- readRDS("data/mrd_feb2021.rds")
+plot(mrd_new[,1], mrd_old[,1])
+cor(na.omit(mrd_new[,1]), na.omit(mrd_old[,1]))
 
 
 #save.image("phylostruct.RData")
-#save(comm, MRD.a_a_a, MRD.b_a_a, ps_no.a_a_a, ps_no.b_a_a, ps_bl.a_a_a, ps_bl.b_a_a, file="MRD_ps.RData")
+#save(comm, MRD.a_a_a, MRD.b_a_a, ps_no.a_a_a, ps_no.b_a_a, psf_bl.a_a_a, ps_bl.b_a_a, file="MRD_ps.RData")
 
 
 
@@ -184,67 +190,165 @@ saveRDS(MRD, "data/mrd.rds")
 # 2. Compute phylosim #
 #######################
 
+# my interpret #####
+# subset community matrix to species in phylogeny
+comm_sub <- comm[,which(colnames(comm) %in% phylo$tip.label)]
+all(colnames(comm_sub) %in% phylo$tip.label)
+tokeep <- phylo$tip.label[which(phylo$tip.label %in% colnames(comm_sub))]
+phylo <- keep.tip(phylo, tokeep)
+
+ps_no <- list()
+ps_bl <- list()
+system.time(
+ps <- phylosim(phylo, comm_sub, mc.cores=4) # 
+)
+
+if(is.null(EDGES)){
+  # get the edges connecting each tip to the root of phylo
+  EDGES <- mclapply(1:length(phylo$tip.label), get_edges, phylo=phylo, mc.cores=4)
+}
+
+# create list of vectors with edges connecting all tips to the root for each community
+comm_edges <- list()
+for(i in 1:nrow(comm)){
+  #extract all edges for species in community i
+  spp <- colnames(comm)[comm[i,]==1]
+  unique(unlist(EDGES[phylo$tip.label %in% spp])) -> comm_edges[[i]]
+}
+rm(spp,i)
+
+# create distance matrix
+ps <- matrix(nrow=nrow(comm), ncol=nrow(comm))
+rownames(ps) <- colnames(ps) <- rownames(comm)
+ps[diag(ps)] <- 0
+
+# create distance matrix for branch lengths
+ps.bl <- ps
+
+# populate distance matrix using formula by Holt et al
+for(i in 1:(nrow(ps)-1)){
+  for(j in (i+1):ncol(ps)){
+    shared <- intersect(comm_edges[[i]], comm_edges[[j]])
+    # calculate without branch lengths
+    a <- length(shared)
+    b <- length(comm_edges[[i]])# - a
+    c <- length(comm_edges[[j]])# - a
+    ps[i,j] <- 1 - a/min(b,c)# + a)
+    # calculate with branch lengths
+    A <- sum(phylo$edge.length[shared])
+    B <- sum(phylo$edge.length[comm_edges[[i]]])# - A
+    C <- sum(phylo$edge.length[comm_edges[[j]]])# - A
+    ps.bl[i,j] <- 1 - A/min(B,C)# + A)
+  }
+}
+
+
+######### end check
+
+
+ps_no[[1]] <- ps[[1]]
+ps_bl[[1]] <- ps[[2]]
+rm(ps)
+print("observed ps calculated")
+
+# calculate randomised phylosim
+for(i in 1:99){
+  # create new (randomized) community matrix by shuffling colnames
+  comm.rnd <- comm_sub
+  idx <- colnames(comm.rnd)
+  colnames(comm.rnd) <- sample(idx)
+  
+  ps <- phylosim(phylo, comm.rnd, mc.cores = 4)
+  # Returns list of two matrices:
+  # [[1]] phylogenetic Simpson dissimilarity without branch lengths
+  # [[2]] phylogenetic Simpson dissimilarity with branch lengths
+  ps_no[[i+1]] <- ps[[1]]
+  ps_bl[[i+1]] <- ps[[2]]
+  print(paste("replicate", i, "finished"))
+  rm(comm.rnd, ps)
+}
+
+rm(i, comm_red, comm.obs, MATCHES, phylo, EDGES)
+assign(paste("ps_no.", n, sep=""), ps_no)
+assign(paste("ps_bl.", n, sep=""), ps_bl)
+#saveRDS(get(paste("ps.", n, sep="")), paste("ps.", n, ".rds", sep=""))
+rm(ps_no, ps_bl)
+}
+rm(n)
+
 # for(n in rownames(analyses)){
-#   #n = rownames(analyses)[x]
-# 
-#   MATCHES <- get(analyses[n,2])
-#   phylo   <- get(analyses[n,1])
-#   EDGES   <- get(paste("EDGES.", analyses[n,1], sep=""))
-#   print(paste("Starting calculation of analysis", n))
-#   
-#   # reduce community matrix to species included in the relevant matching
-#   comm_red <- comm[,colnames(comm) %in% MATCHES[,2]]
-#   
-#   # rename community matrix with phylogeny tip labels
-#   comm.obs <- comm_red
-#   MATCHES.tmp <- MATCHES[!is.na(MATCHES[,2]),]
-#   idx <- as.vector(MATCHES.tmp$tip)
-#   names(idx) <- as.vector(MATCHES.tmp[,2])
-#   rm(MATCHES.tmp)
-#   colnames(comm.obs) <- idx[colnames(comm.obs)]
-#   rm(idx)
-#   
-#   ps_no <- list()
-#   ps_bl <- list()
-#   ps <- phylosim(phylo, comm.obs, EDGES = EDGES)
-#   ps_no[[1]] <- ps[[1]]
-#   ps_bl[[1]] <- ps[[2]]
-#   rm(ps)
-#   print("observed ps calculated")
-#  
-#   # calculate randomised phylosim
-#   
-#   for(i in 1:99){
-#     
-#     # shuffle matching  
-#     MATCHES.rnd <- MATCHES
-#     MATCHES.rnd[!is.na(MATCHES.rnd[,2]),2] <- sample(MATCHES.rnd[!is.na(MATCHES.rnd[,2]),2])
-#     MATCHES.tmp <- MATCHES.rnd[!is.na(MATCHES.rnd[,2]),]
-#     idx <- as.vector(MATCHES.tmp$tip)
-#     names(idx) <- as.vector(MATCHES.tmp[,2])
-#     rm(MATCHES.tmp)
-#     # create new (randomized) community matrix
-#     comm.rnd <- comm_red
-#     colnames(comm.rnd) <- idx[colnames(comm.rnd)]
-#     rm(idx)
-#     
-#     ps <- phylosim(phylo, comm.rnd, EDGES = EDGES)
-#     ps_no[[i+1]] <- ps[[1]]
-#     ps_bl[[i+1]] <- ps[[2]]
-#     print(paste("replicate", i, "finished"))
-#     rm(comm.rnd, ps)
-#   }
-#   
-#   rm(i, comm_red, comm.obs, MATCHES, phylo, EDGES)
-#   assign(paste("ps_no.", n, sep=""), ps_no)
-#   assign(paste("ps_bl.", n, sep=""), ps_bl)
-#   #saveRDS(get(paste("ps.", n, sep="")), paste("ps.", n, ".rds", sep=""))
-#   rm(ps_no, ps_bl)
+#   assign(paste("ps.", n, sep=""), readRDS(paste("ps.", n, ".rds", sep="")))
 # }
 # rm(n)
-# 
-# # for(n in rownames(analyses)){
-# #   assign(paste("ps.", n, sep=""), readRDS(paste("ps.", n, ".rds", sep="")))
-# # }
-# # rm(n)
+# my interpret END #####
+
+
+
+
+
+
+
+for(n in rownames(analyses)){
+  #n = rownames(analyses)[x]
+
+  MATCHES <- get(analyses[n,2])
+  phylo   <- get(analyses[n,1])
+  EDGES   <- get(paste("EDGES.", analyses[n,1], sep=""))
+  print(paste("Starting calculation of analysis", n))
+
+  # reduce community matrix to species included in the relevant matching
+  comm_red <- comm[,colnames(comm) %in% MATCHES[,2]]
+
+  # rename community matrix with phylogeny tip labels
+  comm.obs <- comm_red
+  MATCHES.tmp <- MATCHES[!is.na(MATCHES[,2]),]
+  idx <- as.vector(MATCHES.tmp$tip)
+  names(idx) <- as.vector(MATCHES.tmp[,2])
+  rm(MATCHES.tmp)
+  colnames(comm.obs) <- idx[colnames(comm.obs)]
+  rm(idx)
+
+  ps_no <- list()
+  ps_bl <- list()
+  ps <- phylosim(phylo, comm.obs, EDGES = EDGES)
+  ps_no[[1]] <- ps[[1]]
+  ps_bl[[1]] <- ps[[2]]
+  rm(ps)
+  print("observed ps calculated")
+
+  # calculate randomised phylosim
+
+  for(i in 1:99){
+
+    # shuffle matching
+    MATCHES.rnd <- MATCHES
+    MATCHES.rnd[!is.na(MATCHES.rnd[,2]),2] <- sample(MATCHES.rnd[!is.na(MATCHES.rnd[,2]),2])
+    MATCHES.tmp <- MATCHES.rnd[!is.na(MATCHES.rnd[,2]),]
+    idx <- as.vector(MATCHES.tmp$tip)
+    names(idx) <- as.vector(MATCHES.tmp[,2])
+    rm(MATCHES.tmp)
+    # create new (randomized) community matrix
+    comm.rnd <- comm_red
+    colnames(comm.rnd) <- idx[colnames(comm.rnd)]
+    rm(idx)
+
+    ps <- phylosim(phylo, comm.rnd, EDGES = EDGES)
+    ps_no[[i+1]] <- ps[[1]]
+    ps_bl[[i+1]] <- ps[[2]]
+    print(paste("replicate", i, "finished"))
+    rm(comm.rnd, ps)
+  }
+
+  rm(i, comm_red, comm.obs, MATCHES, phylo, EDGES)
+  assign(paste("ps_no.", n, sep=""), ps_no)
+  assign(paste("ps_bl.", n, sep=""), ps_bl)
+  #saveRDS(get(paste("ps.", n, sep="")), paste("ps.", n, ".rds", sep=""))
+  rm(ps_no, ps_bl)
+}
+rm(n)
+
+# for(n in rownames(analyses)){
+#   assign(paste("ps.", n, sep=""), readRDS(paste("ps.", n, ".rds", sep="")))
+# }
+# rm(n)
 

@@ -4,7 +4,7 @@ library(tidyverse)
 
 
 # Load Smith & Brown tip labels not covered by NCBI 
-sb <- readRDS("SB_tip_labels.rds")
+sb <- readRDS("data/SB_tip_labels.rds")
 
 
 

@@ -10,25 +10,60 @@ library(tidyverse)
 library(plyr)
 library(ape)
 library(rgdal)
+library(rgeos)
+library(phytools)
+library(VIM)
 
 theme_set(theme_bw())
 
-# load data
+
+# DATA PREP #############################################
+
+
 ## trees
-#phylo <- read.tree("trees/allmb_matched_added_species.tre")
+phylo <- read.tree("trees/allmb_matched_added_species_Nov20.tre") # allmb_matched_added_species_3.tre
+
+#plot.phylo(phylo, show.tip.label = FALSE, type="fan")
 ## occurrence matrix
 #load("data/comm.RData")
-sr <- readRDS("data/comm.rds")
+sr <- readRDS("data/comm_Feb2021.rds")
 ## MRD
 #mrd <- readRDS("data/polytomie_RD_results.rds")
-mrd <- readRDS("data/mrd.rds")
+mrd <- readRDS("data/mrd_feb2021.rds")
 ## shapefile
 shape <- readOGR("shapefile/level3.shp")
+trueCentroids = as.data.frame(gCentroid(shape,byid=TRUE))
+
+
+
+length(phylo$tip.label)
+dim(sr)
+dim(mrd)
+
+
+# check how many botanical countries will be removed due to incomplete climate data:
+dat_no.na <- readRDS("data/sem_input_data.rds")
+table(rownames(sr) %in% rownames(dat_no.na))
+# ex_countries <- rownames(sr)[which(!rownames(sr) %in% rownames(dat_no.na))]
+# sr2 <- sr[rownames(sr) %in% rownames(dat_no.na),]
+# sr2 <- na.omit(sr2)
+# dim(sr)
+# dim(sr2)
 
 
 
 # Calc species richness
 sr_df <- data.frame(species_richness = rowSums(sr), region =row.names(sr))
+# to compare to old SR estimates that accidentally included ferns+mosses, read old community matrix comm_Nov2020.rds
+# sr_df$species_richness_phylo_data_only <- rowSums(sr_sub)
+# plot(sr_df$species_richness, sr_df$species_richness_phylo_data_only)
+# abline(1,1)
+# cor(sr_df$species_richness, sr_df$species_richness_phylo_data_only)
+# sr_df$diff <- sr_df$species_richness - sr_df$species_richness_phylo_data_only
+# hist(sr_df$diff, breaks=40)
+
+rm(phylo)
+#saveRDS(sr_df, "number_of_species_")
 
 
 # Get standardized MRD z score
@@ -36,44 +71,143 @@ sr_df <- data.frame(species_richness = rowSums(sr), region =row.names(sr))
 ##(Hawkins, B. A., Diniz-Filho, J. A. F., & Soeller, S. A. (2005). Water links the historical and contemporary components of the Australian bird diversity gradient. Journal of Biogeography, 32(6), 1035–1042. https://doi.org/10.1111/j.1365-2699.2004.01238.x)
 ## --> Z-scores higher than 1.96 indicate that there is a 95% chance that the MRD in the cell is higher than would be expected if species were random global sample. This is supposed to account for differences in species richness between the plots. 
 
-
-
-# plot random distribution with observed value
-mrd.p <- mrd %>% 
-  as.data.frame() %>%
-  add_column(region = row.names(mrd)) %>%
-  pivot_longer(
-    cols = starts_with("rnd")
-  )
-
-# plot in chunks of 10x10
-ggplot(mrd.p[mrd.p$region %in% unique(mrd.p$region)[1:50],], aes(x=value)) + 
-  geom_histogram() + 
-  geom_vline(aes(xintercept = obs), col="red") + 
-  facet_wrap(~region, scales = "free")
-
-#  z <- (mrd[,1] - apply(mrd[,c(2:100)], 1, mean)) / (apply(mrd[,c(2:100)], 1, sd)/sqrt(99))
-  z <- (mrd[,1] - apply(mrd[,c(2:100)], 1, mean)) / (apply(mrd[,c(2:100)], 1, sd))
+# 
+# 
+# # plot random distribution with observed value
+# mrd.p <- mrd %>% 
+#   as.data.frame() %>%
+#   add_column(region = row.names(mrd)) %>%
+#   pivot_longer(
+#     cols = starts_with("rnd")
+#   )
+# 
+# # plot in chunks of 10x10
+# ggplot(mrd.p[mrd.p$region %in% unique(mrd.p$region)[1:50],], aes(x=value)) + 
+#   geom_histogram() + 
+#   geom_vline(aes(xintercept = obs), col="red") + 
+#   facet_wrap(~region, scales = "free")
+# 
+# #  z <- (mrd[,1] - apply(mrd[,c(2:100)], 1, mean)) / (apply(mrd[,c(2:100)], 1, sd)/sqrt(99))
+   z <- (mrd[,1] - apply(mrd[,c(2:100)], 1, mean)) / (apply(mrd[,c(2:100)], 1, sd))
 
 #mrd <- cbind(mrd, as.numeric(z))
 
 
-# Add SR and MRD to shapefile
+# Add SR and MRD and centroids to shapefile
 shape@data$sr <- sr_df$species_richness
+#shape@data$sr_new <- sr_df$species_richness_phylo_data_only
 shape@data$mrd <- mrd[,1]
 shape@data$mrd_z_score <- z
 shape@data$mrd_z_score_binary <- shape@data$mrd_z_score
 shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score< -1.97)] <- "-"
 shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>1.97)] <- "+"
-shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>-1.97 & shape@data$mrd_z_score<1.97)] <- "none"
+shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>-1.97 & shape@data$mrd_z_score<1.97)] <- "zero"
+shape@data$lng <- trueCentroids[,1]
+shape@data$lat <- trueCentroids[,2]
+
+range(shape@data$lat)
+breaks <- seq(-85,85,10)
+# specify interval/bin labels
+tags <- seq(-80, 80, 10)
+# bucketing values into bins
+lat_bins <- cut(shape@data$lat, 
+                breaks=breaks, 
+                include.lowest=TRUE, 
+                right=FALSE, 
+                labels=tags)
+shape@data$lat_bin <- lat_bins
 
 cor.test(shape@data$sr, shape@data$mrd, method="s")
 cor.test(shape@data$sr, shape@data$mrd_z_score, method="s")
 
+rm(sr)
+
+
+#### Add environmental variables to shapefile #####################################
+
+
+soil <- readRDS("data/soil.rds")
+shape@data$soil <- soil$number_soils
+shape@data$soil_simp <- soil$simp_soil
+shape@data$soil_even <- soil$even_soil
+
+climate <- readRDS("data/climate.rds")
+shape@data <- cbind(shape@data, climate)
+
+topography <- readRDS("data/topography.rds")
+shape@data$elev_mean <- topography$elev_mean
+shape@data$elev_sd <- topography$elev_sd
+shape@data$elev_n <- topography$elev_n
+shape@data$tri <- topography$ruggedness_mean
+
+# add area
+library(geosphere)
+shape$area <- areaPolygon(shape)
+
+
+# add biomes
+biomes <- readRDS("data/biomes_olson.rds")
+biome_names <- c("(sub)tropical moist broadleaf forest",
+                 "(sub)tropical dry broadleaf forest",
+                 "(sub)tropical coniferious forest",
+                 "temperate broadleaf/mixed forest",
+                 "temperate coniferous forest",
+                 "boreal forests/taiga",
+                 "(sub)tropical grasslands, savannas, shrublands",
+                 "temperate grasslands, savannas, shrublands",
+                 "flooded grasslands and savannas",
+                 "montane grasslands and shrublands",
+                 "tundra",
+                 "mediterranean forests, woodlands, scrub",
+                 "deserts and xeric shrublands",
+                 "mangroves")
+names(biomes)[grepl("^X", names(biomes))] <- biome_names
+shape@data <- cbind(shape@data, biomes[,-1])
+
+
+# # add human footprint index
+# hfp <- readRDS("data/hfp.rds")
+# shape@data$hfp90 <- hfp$hfp90
+# shape@data$hfp_mean <- hfp$hfp_mean
 
 # Transform to data frame for ggplot
 library(sf)
 shp <- st_as_sf(shape)
+
+
+
+# mean root distance between countries
+hist(shp$mrd, breaks=20, xlab="mean root distance per country")
+
+
+
+
+
+# missing data ##########################################################################
+
+
+dat <- st_drop_geometry(shp)
+names(dat)
+dat <- dat[,c(12:ncol(dat))]
+
+aggr_plot <- aggr(dat[,c(12:ncol(dat))], col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE,
+                  labels=names(data), cex.axis=.9, gap=3, ylab=c("Histogram of missing data","Pattern"))
+
+
+
+
+# 0.84 complete cases for all variables (0.86 without hfp)
+
+# check without the SDs
+aggr_plot <- aggr(dat[,-grep("_sd", names(dat))], col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE,
+                  labels=names(data), cex.axis=.9, gap=3, ylab=c("Histogram of missing data","Pattern"))
+
+# 0.91 complete cases for all variables except SDs
+# 0.86 complete cases for all variables except SDs AND HFP
+
+
+
+
 
 
 # SR MAP ##########################################################################
@@ -87,6 +221,15 @@ ggplot(shp) +
   theme(legend.position = "bottom")
 ggsave(filename=paste0("results/sr_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
 
+# ggplot(shp) + 
+#   geom_sf(aes(fill = sr_new), lwd=0.1) + 
+#   scale_fill_viridis_c(option = "plasma", trans = "sqrt")+ #, 
+#   #  scale_fill_gradient("Species richness", guide="colorbar", low="white", high="darkred",
+#   #                      limits=c(min(sr_df$species_richness),max(sr_df$species_richness)))+
+#   guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+#   theme_void()+
+#   theme(legend.position = "bottom")
+# ggsave(filename=paste0("results/sr_new_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
 
 
 # MRD MAP ##########################################################################
@@ -97,63 +240,362 @@ ggplot(shp) +
   theme_void()+
   theme(legend.position = "bottom")
 ggsave(filename=paste0("results/mrd_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
+# 
+# 
+# ggplot(shp) + 
+#   geom_sf(aes(fill = mrd_z_score), lwd=0.1) + 
+#   scale_fill_viridis_c(option = "plasma")+ #, 
+#   guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+#   theme_void()+
+#   theme(legend.position = "bottom")
+# ggsave(filename=paste0("results/mrd_z_score_map", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
+# 
 
+
+# SCALED COMPARISON MAPS ########################################################
+# a map that shows....? deviations from the average SR? what about diffs between SR+mrd...
+# range01 <- function(x){(x-min(x, na.rm = TRUE))/(max(x, na.rm = TRUE)-min(x, na.rm = TRUE))}
+# #ztrans <- function(x){(x - mean(x, na.rm = T)) / sd(x, na.rm = T)}
+# shp$sr_scaled <- range01(shp$sr)
+# #shp$sr_ztrans <- ztrans(shp$sr)
+# #shp$mrd_ztrans <- ztrans(shp$mrd)
+# shp$mrd_scaled <- range01(shp$mrd)
+# ggplot(shp) + 
+#   geom_sf(aes(fill = mrd_scaled-sr_scaled), lwd=0.1) + 
+#   scale_fill_viridis_c(option = "plasma")+ #, 
+#   #  scale_fill_gradient("Species richness", guide="colorbar", low="white", high="darkred",
+#   #                      limits=c(min(sr_df$species_richness),max(sr_df$species_richness)))+
+#   guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+#   theme_void()+
+#   theme(legend.position = "bottom")
+# this shows the largest discrepancies between mrd and sr (smallest values), but it does not tell if its due to low MRD or big SR.
+
+
+# LDG? #########################################################################
+(h.res <- hist(shp$lat, breaks=20))
+ggplot(shp, aes(lat, sr))+
+  geom_point()
+  #geom_text(aes(label=LEVEL_3_CO, col=factor(mrd_z_score_binary)),hjust=0, vjust=0)+
+  #scale_x_log10()+
+cor.test(abs(shp$lat), shp$sr, method = "s")
+
+# plot 10 degree bins
+ggplot(shp, aes(lat_bin, sr)) + 
+  geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6))) +
+  coord_flip()
+ggsave(filename=paste0("results/lat_bands_SR", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=6, height=4)
+
+kruskal.test(shp$sr, shp$lat_bin)
+pairwise.wilcox.test(shp$sr, shp$lat_bin, p.adjust.method = "fdr")
+
+
+ggplot(shp, aes(lat_bin, mrd_z_score)) + 
+  geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6))) +
+#  scale_y_continuous(limits = c(-20,30))+
+  coord_flip()
+ggsave(filename=paste0("results/lat_bands_MRD_EcolLetFig3", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=6, height=4)
+
+
+table(shp$lat_bin)
+which(shp$lat < -25 | shp$lat > 25)
+shp$trops <- "tropical"
+shp$trops[which(shp$lat < -25 | shp$lat > 25)] <- "non-tropical"
+ggplot(shp, aes(trops, mrd)) + 
+  geom_boxplot(fill=c("blue", "red"))
+ggsave(filename=paste0("results/MRD_EcolLetFig1", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=3, height=3)
+kruskal.test(shp$mrd_z_score, shp$trops)
+
+# # rank ordered distribution of mrd_z_score (figure1 ecol)
+# qqnorm(y=sort(shp$mrd_z_score[shp$trops=="tropical"]),col="red", datax = TRUE)
+# qqnorm(y=sort(shp$mrd_z_score[shp$trops=="non-tropical"]),col="blue", datax = TRUE, add=TRUE)
+# #lines(sort(shp$mrd_z_score[shp$trops=="non-tropical"]),col="blue", type="l")
+# #qqline()
+
+# ggplot(shp, aes(sr, lat))+
+#   geom_point(aes(col=mrd_z_score_binary))+
+#   scale_x_log10()
+
+
+
+# BIOME MAP ###############################################
 
 ggplot(shp) + 
-  geom_sf(aes(fill = mrd_z_score), lwd=0.1) + 
-  scale_fill_viridis_c(option = "plasma")+ #, 
-  guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
-  theme_void()+
-  theme(legend.position = "bottom")
-ggsave(filename=paste0("results/mrd_z_score_map", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
+  geom_sf(aes(fill = factor(predominant_biome)), lwd=0.1) + 
+  scale_fill_viridis_d()+
+  theme_void()#+
+#  theme(legend.position = "bottom")
 
 
 
-# check how many obs are inside 2xSD = < or > 1.96 z-score
-shp <- na.omit(shp)
-ggplot(shp) + 
-  geom_sf(aes(fill = factor(mrd_z_score_binary)), lwd=0.1, na.rm = TRUE) + 
-#  scale_fill_viridis_d(option = "plasma")+ 
-  scale_fill_manual(values = c("lightblue", "darkorange", "grey")) + 
-  theme_void()+
-  theme(legend.position = "bottom")
-ggsave(filename=paste0("results/mrd_z_score_binary_map", gsub(" |:", "_", date()), ".png"), dpi=600, width=10, height=7)
-
-table(shp$mrd_z_score_binary)/nrow(shp) # 30% lower, 40% higher, 30% null
 
 
-cols <- c("blue", "grey", "red")
-continent <- unique(shp$CONTINENT)
-ggplot(shp, aes(sr, mrd_z_score, col=factor(mrd_z_score_binary)))+
-  geom_point()+
+
+
+
+
+saveRDS(shp, "data/shp_object_fin_analysis.RDS")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Scaling MRD effects ###########################################
+
+
+shp <- readRDS("data/shp_object_fin_analysis.RDS")
+library(sf)
+dat <- st_drop_geometry(shp)
+
+# Remove NAs
+# dat.cl <- na.omit(dat)
+
+# # Is scaling MRD really necessary?
+# # check residuals for area pattern
+# lm.mrd <- lm(dat.cl$mrd~dat.cl$mrd_z_score)
+# plot(lm.mrd)
+# dat.cl$mrd_residuals <- lm.mrd$residuals
+# 
+# 
+# library(gridExtra)
+# grid.arrange(ncol=2,
+#   ggplot(dat.cl, aes(sr, mrd, label=LEVEL_3_CO))+
+#     geom_text(aes(label=LEVEL_3_CO, hjust=0, vjust=0), size=3)+
+#     scale_x_log10()+
+#     geom_smooth(method="lm"),
+#   ggplot(dat.cl, aes(sr, mrd_z_score, label=LEVEL_3_CO))+
+#     geom_text(aes(label=LEVEL_3_CO),hjust=0, vjust=0, size=3)+
+#     scale_x_log10()+
+#     geom_smooth(method="lm"),
+#   ggplot(dat.cl, aes(mrd, mrd_z_score, label=LEVEL_3_CO))+
+#     geom_text(aes(label=LEVEL_3_CO, col=log(area)),hjust=0, vjust=0, size=3)+
+#     geom_smooth(method="lm"),
+#   ggplot(dat.cl, aes(area, mrd_residuals, label=LEVEL_3_CO))+
+#     geom_text(aes(label=LEVEL_3_CO),hjust=0, vjust=0, size=3)+
+#     scale_x_log10()+
+#     geom_smooth(method="lm")
+# )
+# ggplot(dat.cl, aes(mrd, mrd_z_score, label=LEVEL_3_CO))+
+#   geom_text(aes(label=LEVEL_3_CO, col=log(sr)),hjust=0, vjust=0, size=3)+
+#   geom_smooth(method="lm")
+# ggplot(dat.cl, aes(sr, mrd_residuals, label=LEVEL_3_CO))+
+#   geom_text(aes(label=LEVEL_3_CO),hjust=0, vjust=0, size=3)+
+#   scale_x_log10()+
+#   geom_smooth(method="lm")
+
+# no
+#plot(dat.cl$mrd, dat.cl$mrd_z_score, pch=factor(dat.cl$LEVEL_3_CO))
+#abline(lm(dat.cl$mrd_z_score~dat.cl$mrd))
+# countries affected by scaling:
+
+
+
+
+
+
+# CORRELATIONS and MULTICOLINERITY ########################################################
+
+
+rownames(dat) <- dat$LEVEL_3_CO
+dat <- dat[,c(grep("sr", names(dat)):ncol(dat))]
+dat_means <- dat[,-grep("lng|lat_bin|z_score|trops|binary|_n|_sd|_even|_simp", names(dat))]
+dat_sds <- dat[,-grep("lng|lat_bin|z_score|trops|binary|_n|_mean|tri|predominant", names(dat))]
+
+
+aggr_plot <- aggr(dat_means, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE,   # [,c(12:ncol(dat))]
+                   labels=names(data), cex.axis=.9, gap=3, ylab=c("Histogram of missing data","Pattern"))
+aggr_plot <- aggr(dat_sds, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE,   # [,c(12:ncol(dat))]
+                  labels=names(data), cex.axis=.9, gap=3, ylab=c("Histogram of missing data","Pattern"))
+
+
+dat_means <- na.omit(dat_means)
+dat_sds <- na.omit(dat_sds)
+
+
+library(ggcorrplot)
+cor.dat.means<- cor(dat_means, method="s")
+p.dat.means <- cor_pmat(dat_means, method="s")
+ggcorrplot(cor.dat.means[,c(1:12)], lab=TRUE, p.mat = p.dat.means[,c(1:12)], insig = "blank")
+
+cor.dat.sds<- cor(dat_sds, method="s")
+p.dat.sds <- cor_pmat(dat_sds, method="s")
+ggcorrplot(cor.dat.sds[,c(1:13)], lab=TRUE, p.mat = p.dat.sds[,c(1:13)], insig = "blank")
+
+
+plot(log1p(dat$area), log1p(dat$sr))
+plot(log1p(dat$area), log1p(dat$mrd))
+plot(dat$lat, dat$olson_percent)
+
+hist(log(dat$area[which(is.na(dat$pet_mean))]))
+
+ggplot(dat, aes(area, sr, group=is.na(pet_mean)))+
+  geom_point(aes(col=is.na(dat$pet_mean)))+
   scale_x_log10()+
-  geom_smooth(method="lm")
-ggsave(filename=paste0("results/mrd_z_score_sr_scatterplot", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=6, height=4)
+  scale_y_log10()
 
-
-ggplot(shp, aes(sr, mrd_z_score, group=factor(CONTINENT), label=LEVEL_3_CO))+
-#  geom_point()+
-  geom_text(aes(label=LEVEL_3_CO, col=factor(mrd_z_score_binary)),hjust=0, vjust=0)+
+ggplot(dat, aes(area, mrd_z_score, group=is.na(pet_mean)))+
+  geom_point(aes(col=is.na(dat$pet_mean)))+
   scale_x_log10()+
-  geom_smooth(method="lm")+
-  facet_wrap(~CONTINENT, scales = "free")
-ggsave(filename=paste0("results/mrd_z_score_sr_per_continent", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=9, height=7)
+  scale_y_continuous(trans = "log1p")
 
 
-#Get percentage higher lower for each continent
-perc_tab <- function(x){table(factor(x))/length(x)}
-tapply(shp$mrd_z_score_binary, shp$CONTINENT, perc_tab)
+# biome correlations
+dat.biome <- dat_means[grep("sr|mrd|forest|land|tundra|mangrove|number_biomes|predominant", names(dat_means))]
+cor.biome <- cor(dat.biome, method="s")
+p.biome <- cor_pmat(dat.biome, method="s")
+ggcorrplot(cor.biome[,c(1:2)], lab=TRUE, p.mat = p.biome[,c(1:2)], insig = "blank")
+
+# without excluding missing data countries:
+biomes$sr <- shp$sr
+biomes$mrd <- shp$mrd
+cor.test(biomes$sr, biomes$`(sub)tropical moist broadleaf forest`, method="s")
+cor.test(biomes$mrd, biomes$`(sub)tropical moist broadleaf forest`, method="s")
+# only complete countries for means
+cor.test(dat_means$sr, dat_means$`(sub)tropical moist broadleaf forest`, method="s")
+cor.test(dat_means$mrd, dat_means$`(sub)tropical moist broadleaf forest`, method="s")
+# only complete countries for SDs
+cor.test(dat_sds$sr, dat_sds$`(sub)tropical moist broadleaf forest`, method="s")
+cor.test(dat_sds$mrd, dat_sds$`(sub)tropical moist broadleaf forest`, method="s")
+
+ggplot(dat.biome, aes(y=sr, x=predominant_biome, group=predominant_biome))+
+  geom_boxplot(varwidth = TRUE)+
+  scale_x_continuous(breaks=c(1:14), labels=biome_names)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+pairwise.wilcox.test(dat.biome$sr, dat.biome$predominant_biome, p.adjust.method = "fdr")
+
+ggplot(dat.biome, aes(y=mrd, x=predominant_biome, group=predominant_biome))+
+  geom_boxplot(varwidth = TRUE)+
+  scale_x_continuous(breaks=c(1:14), labels=biome_names)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+pairwise.wilcox.test(dat.biome$mrd, dat.biome$predominant_biome, p.adjust.method = "fdr")
 
 
 
-# TRASH
+## most common biome combinations
+#get biome ranks per country
+biomes <- dat.biome
+#biomes <- readRDS("data/biomes_olson.rds")
+library(tidyr)
+long_biomes <- biomes %>% pivot_longer(cols=X1:X14)
+order(s)
+ggplot(long_biomes[1:100,], aes(x=country, y=value, fill=name))+
+  geom_bar(stat="identity", position="stack")
 
-# workspace size etc
-# system('grep MemTotal /proc/meminfo') # 16GB
-# size = 0
-# for (x in ls() ){
-#   thisSize = object.size(get(x))
-#   size = size + thisSize
-#   message(x, " = ", appendLF = F); print(thisSize, units='auto')
-# }
-# message("total workspace is ",appendLF = F); print(size, units='auto')
+boxplot(dat.biome$number_biomes~dat.biome$predominant_biome)
+
+count <- biomes[,c(2:15)]!=0
+count <- apply(count, 1, which)
+count <- sapply(count, names)
+combs <- lapply(count, paste, collapse=" ")
+combs <- unlist(combs)
+as.data.frame(sort(table(combs)))
+
+# which countries have the most similar composition?
+bin <- biomes[,c(2:15)]
+rownames(bin) <- biomes$country
+#bin[bin==TRUE] <- 1
+dbin <- dist(bin)
+klust <- hclust(dbin)
+colors()
+
+plot(klust, cex=0.6, label=colors(distinct=TRUE)[biomes$predominant_biome])
+hcd <- as.dendrogram(klust)
+library("phytools")
+plot(as.phylo(klust), cex = 0.6, tip.color=colors()[biomes$predominant_biome])
+
+# Cut tree into groups
+sub_grp <- cutree(klust, k = 2)
+plot(as.phylo(klust), cex = 0.6, tip.color=c("blue", "red")[sub_grp])
+sub_grp <- cutree(klust, k = 3)
+plot(as.phylo(klust), cex = 0.6, tip.color=c("blue", "red", "green")[sub_grp])
+sub_grp <- cutree(klust, k = 4)
+plot(as.phylo(klust), cex = 0.6, tip.color=c("blue", "red", "green", "yellow")[sub_grp])
+sub_grp <- cutree(klust, k = 5)
+plot(as.phylo(klust), cex = 0.6, tip.color=c("blue", "red", "green", "yellow", "grey")[sub_grp])
+
+# try PCA for variable reduction
+pca.bin <- prcomp(bin, center = TRUE, scale. = TRUE)
+pca.bin2 <- prcomp(bin[,paste0("X", c(1,2,3,6,7,10,11,14))], center = TRUE, scale. = TRUE)
+summary(pca.bin)
+#library(devtools)
+#install_github("vqv/ggbiplot")
+library(ggbiplot)
+ggbiplot(pca.bin)+ # , groups = biomes$sr
+  geom_point(size = scale(biomes$sr)+2, alpha=0.5)
+
+# plot(hcd, type = "rectangle", ylab = "Height")
+# # Define nodePar
+# nodePar <- list(lab.cex = 0.6, pch = c(NA, 19), 
+#                 cex = 0.7, col = colors(distinct=TRUE)[biomes$predominant_biome])
+# plot(hcd, ylab = "Height", nodePar = nodePar)
+
+
+# whats the most common biome (the biome that takes up most percentages)
+ggplot(long_biomes[long_biomes$value!=0,], aes(x=value))+
+  geom_histogram()+
+  geom_vline(data = ddply(long_biomes, "name", summarize, wavg = mean(value)), aes(xintercept=wavg))+
+  facet_wrap(~name, ncol=1, strip.position = "right")+
+  theme(strip.background = element_blank(),
+        panel.spacing.y = unit(0,"cm"))
+
+# is the percentage the habitat is represented key to SR?
+plot(long_biomes$sr[long_biomes$name=="X1"]~long_biomes$value[long_biomes$name=="X1"])
+
+long_biomes$predominant <- long_biomes$predominant_biome==as.numeric(gsub("X", "", long_biomes$name))
+
+ggplot(long_biomes[long_biomes$value!=0,], aes(x=value, y=sr))+
+  geom_point(aes(col=predominant), alpha=.5)+
+  geom_smooth(method="lm", se = FALSE)+
+  facet_wrap(~name)
+
+# this does not work, long_biomes is not a propper representation of dat.biome WHY THE FUCK
+# ok got it. becuase its based on complete data....:]
+cor.test(long_biomes$value[long_biomes$name=="X1"],
+        long_biomes$sr[long_biomes$name=="X1"], ,method = "s")
+# cor.test(long_biomes$value[long_biomes$name=="X1"],
+#          long_biomes$sr[long_biomes$name=="X1"], method="s")
+# cor.test(long_biomes$value[long_biomes$name=="X10" &long_biomes$value!=0],
+#          long_biomes$sr[long_biomes$name=="X10" &long_biomes$value!=0])
+# cor.test(long_biomes$value[long_biomes$name=="X13" &long_biomes$value!=0],
+#          long_biomes$sr[long_biomes$name=="X13" &long_biomes$value!=0]).
+# SR + biome percent negative correlated in X6+11
+
+
+# X1 SR versus percent
+plot(biomes$X1,  biomes$sr)
+cor.test(biomes$X1,  biomes$sr, method="s")
+
+
+
+ggplot(long_biomes, aes(number_biomes))+
+  geom_bar()+
+#  geom_smooth(method="lm", se = FALSE)+
+  facet_wrap(~name)
+
+
+
+# # human footprint:
+# plot(dat.cl$hfp90, dat.cl$sr)
+# plot(dat.cl$hfp90, dat.cl$mrd)
+# ggplot(dat.cl, aes(y=hfp90, x=predominant_biome, group=predominant_biome))+
+#   geom_boxplot()+
+#   scale_x_continuous(breaks=c(1:14), labels=paste(biome_names, c(1:14)))+
+#   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+# 
+# # remove hfp
+# rem <-  which(grepl("hfp", names(dat.cl)))
+# dat.cl <- dat.cl[,-rem]
+

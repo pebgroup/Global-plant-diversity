@@ -16,7 +16,7 @@ library(raster)
 library(vegan)
 library(rgdal)
 
-shape <- readOGR("shapefile/level3.shp")
+shape <- readOGR("shapefile/level3_mod.shp")
 soil <- raster("soil_raster_layer_000832.tif")
 #soil <- raster("data/soilgrids/soil_raster_layer_000832.tif")
 
@@ -81,13 +81,6 @@ ggplot(shp) +
 ggplot(shp) +
   geom_sf(aes(fill = soil_even), lwd=0.1)+
   theme_void()
-
-
-
-
-
-
-
 
 
   

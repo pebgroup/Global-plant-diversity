@@ -1,0 +1,143 @@
+Full model ###################################################################################
+
+R-Square:
+                   Estimate
+    sr_trans          0.691
+    mrd               0.540
+    sub_trop_mbf      0.573
+    deserts_x_shrb    0.319
+    tra_sd            0.312
+    sea_sd            0.307
+    soil              0.233
+    
+   
+fitmeasures(sem_full, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+       chisq           df       pvalue   cfi.robust rmsea.robust          aic 
+    1066.301       88.000        0.000        0.566        0.192     4926.282 
+
+Model with removed step() variables ##########################################################
+
+R-Square:
+                   Estimate
+    sr_trans          0.675
+    mrd               0.569
+    sub_trop_mbf      0.573
+    deserts_x_shrb    0.522
+    tra_sd            0.312
+    sea_sd            0.307
+    soil              0.233
+    
+fitmeasures(sem_mod, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+       chisq           df       pvalue   cfi.robust rmsea.robust          aic 
+     907.532       72.000        0.000        0.604        0.196     4920.427
+    
+No explanatory power lost, but model fit still bad
+
+
+Full model with suggested modifications #############################
+# mods
+          sea_sd ~ sea_m 
+          tra_sd ~ tra_m
+          deserts_x_shrub ~ mat_m
+          tra_sd ~ sea_sd
+          sea_sd ~ pre_sd
+          sea_sd ~ pet_sd
+          tra_sd~~sea_sd
+          deserts_x_shrub ~ pre_m
+          deserts_x_shrub ~ mrd
+          sea_sd ~ mat_sd
+ R-Square:
+                   Estimate
+    sr_trans          0.675
+    mrd               0.355
+    sub_trop_mbf      0.573
+    deserts_x_shrb    0.323
+    tra_sd            0.581
+    sea_sd            0.696
+    soil              0.233
+
+fitmeasures(sem_full_mods, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+       chisq           df       pvalue   cfi.robust rmsea.robust          aic 
+     467.995       78.000        0.000        0.829        0.128     4347.977 
+
+
+Full model, ALL _SD variables removed ###########################################################
+R-Square:
+                   Estimate
+    sr_trans          0.673
+    mrd               0.444
+    sub_trop_mbf      0.573
+    deserts_x_shrb    0.319
+    soil              0.23
+
+fitmeasures(sem_full_no_sd, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+       chisq           df       pvalue   cfi.robust rmsea.robust          aic 
+     382.178       42.000        0.000        0.745        0.164     3434.913 
+     
+Full model, ALL _SD variables removed WITH MODS ###########################################################
+     # mods
+          deserts_x_shrub  ~ mat_m+ pre_m
+          sub_trop_mbf ~ temp_bmf
+          #sub_trop_mbf ~ area
+          sub_trop_mbf ~ pet_m
+          #sub_trop_mbf ~ tri
+          sub_trop_mbf  ~    sub_trop_dbf
+  R-Square:
+                   Estimate
+    sr_trans          0.668
+    mrd               0.450
+    sub_trop_mbf      0.669
+    deserts_x_shrb    0.522
+    soil              0.233
+   
+     
+fitmeasures(sem_full_no_sd, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+       chisq           df       pvalue   cfi.robust rmsea.robust          aic 
+     202.536       37.000        0.000        0.874        0.122     3265.271 
+     
+   
+     
+Full model WITHOUT sea_sd + tra_sd  ##############################################################
+# (variables are kinda overkill and keep causing trouble in fitting process
+tsem_full_no_spatial_temp_hg <- " # (sea_sd + tra_sd)
+          # regressions
+          sr_trans ~ soil + sub_trop_mbf + sub_trop_dbf+ area+ pre_sd+ mrd+ mont_gs + pre_m+ tra_m
+          + mat_m + mat_sd + sea_m + medit_fws + temp_gss + tri + pet_sd + pet_m + temp_bmf
+          mrd ~ pre_m+ sea_m+ tra_m+  soil + tri+  pre_sd + pet_m+ mat_m + area
+          + mat_sd + temp_bmf + sub_trop_mbf + pet_sd + medit_fws + sub_trop_cf + deserts_x_shrub
+          
+          # secondary  regressions
+          sub_trop_mbf ~ mat_m + pre_m + tra_m
+          deserts_x_shrub ~ pet_m
+          soil ~ area
+"     
+ fitmeasures(sem_full_no_spatial_temp_hg, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+       chisq           df       pvalue   cfi.robust rmsea.robust          aic 
+     524.045       51.000        0.000        0.687        0.175     3402.478 
+     
+# BASIC 5 MODEL ######################################################################3
+mod_base5_ind <- "
+          # regressions
+          sr_trans ~ soil + sub_trop_mbf + sub_trop_dbf+ area+ pre_sd + mrd 
+          mrd ~ pre_m+ sea_m+ tra_m + sea_sd + soil + tri
+          
+          soil ~ area
+          sea_sd ~ area
+          sub_trop_mbf ~ pre_m + tra_m 
+          
+          # mods
+          sea_sd ~ sea_m
+          sea_sd ~ pre_sd
+          sub_trop_mbf ~ area
+"
+fitmeasures(fsem_base5_ind, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+       chisq           df       pvalue   cfi.robust rmsea.robust          aic 
+     152.223       26.000        0.000        0.910        0.120     3266.876 
+      (wenn man hier den indirekten pfad soil~area entfernt is der fit richtig gut)
+
+
+     
+     
+     
+     
+     

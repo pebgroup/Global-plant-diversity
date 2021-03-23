@@ -23,7 +23,7 @@ library("stringr")
 
 # Choose database, possible values: WCSP, NCBI, BIEN, SB ###########################
 # You can chose more than 1 (e.g. c("BIEN", "NCBI")) 
-db <- "NCBI"
+db <- "WCSP"
 
 
 # APG edits ######################################################################
@@ -94,7 +94,7 @@ if("NCBI" %in% db){
 }
 
 if("WCSP" %in% db){
-  wcsp <- readRDS("../data/wcp_dec_19.rds")
+  wcsp <- readRDS("data/wcsp/wcp_jun_20.rds")
   
   #check for no match and fix
   
@@ -155,7 +155,7 @@ if("WCSP" %in% db){
   
   wcsp.apg <- left_join(wcsp1, f.apg, by="family")
   
-  saveRDS(wcsp.apg, "../data/WCSP.apg.rds")
+  saveRDS(wcsp.apg, "data/WCSP.apg.rds")
   #write.csv(wcsp.apg, "../results/Spermatophyta_WCSP_APG_checked.csv", row.names = F, quote = F)
   
 }
