@@ -135,11 +135,12 @@ my.lavSpatialCorrect <- function(obj, xvar, yvar, distance, alpha=0.05){
   # change to use moran.mc for distance and also Monte Carlo p value estimation
   
 #  TEST DATA
-  # obj=c2.fit.p
-  # xvar=dat_no.na$x
-  # yvar=dat_no.na$y
-  # distance=1600
-  # alpha=0.05
+  obj=c2.fit.p
+  xvar=dat_no.na$x
+  yvar=dat_no.na$y
+  distance=1600
+  alpha=0.05
+  distance=c(500,2000)
   
   require(lavaan)
   require(ape)

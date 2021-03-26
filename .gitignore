@@ -14,10 +14,10 @@
 *.docx
 *.pdf
 *.RDataTmp
+*.sh
 .Rproj.user/
 data/
 literature/
 old_stuff/
 shapefile/
-
-
+.~lock.interpolation_notes.odt#
