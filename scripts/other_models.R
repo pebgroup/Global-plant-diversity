@@ -11,6 +11,7 @@ library(ggsci)
 library(cowplot) 
 library(ggcorrplot)
 library(tidyverse)
+library(data.table)
 theme_set(theme_bw())
 source("scripts/my_corrplot_func.R")
 
@@ -28,7 +29,7 @@ org <- st_drop_geometry(shp)
 # --> remove mrd_z_scores since we do not scale MRD to a null model. 
 # --> remove lng + lat + trops, never mind the gradients
 
-dat <- org[,-grep("trops|_n|lng|lat|z_score|soil_even|soil_simp|mangroves|flooded|predom|elev_mean", names(org))]
+dat <- org[,-grep("trops|_n|lng|lat|z_score|soil_even|soil_simp|mangroves|flooded|predom|elev_mean|MRD.sd|MDR.sd", names(org))]
 rownames(dat) <- dat$LEVEL_3_CO
 dat <- dat[,c(grep("sr", names(dat)):ncol(dat))]
 
@@ -45,24 +46,45 @@ dat <- dat[,c(grep("sr", names(dat)):ncol(dat))]
 # dat_means_scaled <- as.data.frame(dat_means_scaled)
 # dat_means_scaled$predominant_biome <- dat_means$predominant_biome
 # 
+# except paleoclimate from NA excloding and merge it back in again
+temp <- dat[,grep("ano", names(dat))]
+temp$level3 <- row.names(temp)
+dat <- dat[,-grep("ano", names(dat))]
+#dat_no.na <- dat[!is.na(c(paste0("dat$", names(dat)[-grep("ano", names(dat))]))), ] # keep paleoclim NAs
 dat_no.na <- na.omit(dat)
+dat_no.na$level3 <- row.names(dat_no.na)
+dat_no.na <- merge(dat_no.na, temp, all.x=TRUE)
 # dat_scaled <- apply(dat_no.na[-grep("predominant_biome", names(dat_no.na))], 2, ztrans)
 # dat_scaled <- as.data.frame(dat_scaled)
 # dat_scaled$predominant_biome <- dat_no.na$predominant_biome
+dat_no.na
 
 
 
 # get catchy names
-names(dat_no.na)[17:28] <- c("sub_trop_mbf", "sub_trop_dbf", "sub_trop_cf", "temp_bmf", "temp_cf",
+## get first col starting with (sub)
+first <- grep("(sub)", names(dat_no.na))[1]
+last <- grep("xeric", names(dat_no.na))
+names(dat_no.na)[first:last] <- c("sub_trop_mbf", "sub_trop_dbf", "sub_trop_cf", "temp_bmf", "temp_cf",
                                     "boreal_f_taiga", "_sub_trop_gss", "temp_gss", "mont_gs", "tundra",
                                     "medit_fws", "deserts_x_shrub")
 
-saveRDS(dat_no.na, "data/data_for_SEM.rds")
+
 
 #### CORRELATION #############################################################################
+# paleoclim-extrawurst
+cor.test(dat_no.na$sr, dat_no.na$Mio_ano_AP)
+cor.test(dat_no.na$sr, dat_no.na$Mio_ano_MAT)
+cor.test(dat_no.na$sr, dat_no.na$Plio_ano_AP)
+cor.test(dat_no.na$sr, dat_no.na$LGM_ano_MAT)
+rownames(dat_no.na) <- dat_no.na$level3
+dat_no.na <- dat_no.na[,-grep("ano|level3",names(dat_no.na))]
+dat_no.na <- na.omit(dat_no.na)
+dim(dat_no.na)
+saveRDS(dat_no.na, "data/data_for_SEM.rds")
 
-cor.dat_no.na<- cor(dat_no.na[,-grep("sr|mrd|number|elev",names(dat_no.na))])
-p.dat_no.na <- cor_pmat(dat_no.na[,-grep("sr|mrd|number|elev",names(dat_no.na))])
+cor.dat_no.na<- cor(dat_no.na[,-grep("sr|mrd|mdr|number|elev",names(dat_no.na))])
+p.dat_no.na <- cor_pmat(dat_no.na[,-grep("sr|mrd|mdr|number|elev",names(dat_no.na))])
 
 my_corrplot(cor.dat_no.na, lab=TRUE, p.mat = p.dat_no.na, insig = "blank",
             tl.cex = 8, digits = 1, type = "lower", hc.order = FALSE, lab_size = 3, highlight = TRUE)+
@@ -74,7 +96,7 @@ ggsave("results/correlation_march2021.png", width=6, height=5, units = "in", dpi
 cor.dat_no.na<- cor(dat_no.na[,-grep("number|elev",names(dat_no.na))])
 p.dat_no.na <- cor_pmat(dat_no.na[,-grep("number|elev",names(dat_no.na))])
 
-my_corrplot(cor.dat_no.na[,c(1,2)], lab=TRUE, p.mat = p.dat_no.na[,c(1,2)], insig = "blank",
+my_corrplot(cor.dat_no.na[,c(1,2,3)], lab=TRUE, p.mat = p.dat_no.na[,c(1,2,3)], insig = "blank",
            tl.cex = 8, digits = 1, type = "lower", hc.order = FALSE, lab_size = 2.5)+
   theme(axis.text.x = element_text(margin=margin(0,0,0,0)),  # Order: top, right, bottom, left
         axis.text.y = element_text(margin=margin(0,0,0,0)))
