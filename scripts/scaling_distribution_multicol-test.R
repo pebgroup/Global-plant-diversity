@@ -20,8 +20,8 @@ dat_no.na$sr_trans <- sqrt(dat_no.na$sr)
 
 # test distribution of potential response variables ############################################################
 ## distributions SR and MRD 
-hist(dat_no.na[,c("sr", "mrd")])
-hist(dat_no.na[,c("sr_trans", "mrd")])
+hist(dat_no.na[,c("sr", "mrd", "mdr")])
+hist(dat_no.na[,c("sr_trans", "mrd", "mdr")])
 hist(dat_no.na$sr, breaks=100)
 # mrd is kinda normally distributed, SR not. Lets test:
 descdist(dat_no.na$mrd, discrete = FALSE, boot=500)
@@ -29,6 +29,10 @@ shapiro.test(dat_no.na$mrd) # not far away from normal distribution
 mrd_norm_fit <- fitdist(dat_no.na$mrd, "norm",method="mle")
 summary(mrd_norm_fit)
 plot(mrd_norm_fit)
+
+descdist(dat_no.na$mdr, discrete = FALSE, boot=500)
+descdist(log(dat_no.na$mdr), discrete = FALSE, boot=500)
+dat_no.na$mdr_trans <- log(dat_no.na$mdr)
 
 descdist(dat_no.na$sr, discrete = TRUE, boot=500) # Poisson regression or negative binomial regression
 descdist(log(dat_no.na$sr), discrete = FALSE, boot=500) # doesnt make it better
@@ -192,7 +196,9 @@ summary(lm_sr2)
 # --> If problems occurr, remove pet_m and keep mat_m
 
 
-lm_mrd <- lm(mrd ~ . -sr_trans, data=temp)
+
+
+lm_mrd <- lm(mrd ~ . -sr_trans -mdr -mdr_trans, data=temp)
 sort(car::vif(lm_mrd))
 
 # check out mat_m and pet_m
@@ -205,6 +211,18 @@ summary(lm_mrd1)$r.squared
 summary(lm_mrd2)$r.squared
 # removing mat_m is more efficient in reducing VIFs, removing pet_m leaves more explanatory power.
 # Same decision as above if necessary
+
+
+lm_mdr <- lm(mdr_trans ~ . -sr_trans -mdr -mrd, data=temp)
+sort(car::vif(lm_mdr))
+lm_mdr2 <- lm(mdr_trans ~ . -sr_trans -mrd -mdr -pet_m, data=temp)
+sort(car::vif(lm_mdr2))
+
+
+
+summary(lm_mrd2)
+summary(lm_mdr2)
+round(coef(lm_mdr2),2)
 
 # indirect effets:
 lm_subtropmbf <- lm(sub_trop_mbf ~ mat_m + pre_m + tra_m, data=dat_no.na)

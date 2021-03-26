@@ -85,17 +85,23 @@ res <- data.frame(species = names(ES[[2]]),
                   mean.dr = colMeans(1/output)
                   )
 
-saveRDS(res, "polytomie_ES_results.rds")
+#saveRDS(res, "polytomie_ES_results.rds")
 
 # hist(res$mean.dr) #[res$mean.es<5] # some really high values
 # hist(res$sd.es)
 # 
 # 
-# res.mrd <- readRDS("data/polytomie_RD_results_Nov20.rds")
-# hist(res.mrd$mean.rd)
-# plot(res.mrd$mean.rd, log10(res$mean.dr))
-# cor(res.mrd$mean.rd, res$mean.dr)
-# 
+res.mrd <- readRDS("data/polytomie_RD_results_Nov20.rds")
+res <- readRDS("data/polytomie_ES_results.rds")
+hist(res.mrd$mean.rd)
+hist(log(res$mean.dr))
+cor(res.mrd$mean.rd, res$mean.dr, method="s") # rho=0.36, not linear at all
+# ggplot(data=data.frame(rd=rd.test, dr=1/es.test), aes(rd,dr))+
+#   geom_point(alpha=0.1)+
+#   scale_y_log10()
+
+
+
 # # scaleable test 
 # keep <- sample(1:length(phylo$tip.label), length(phylo$tip.label))
 # drop <- 1:length(phylo$tip.label)

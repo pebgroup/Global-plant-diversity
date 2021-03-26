@@ -61,6 +61,7 @@ colnames(comm)[!colnames(comm) %in% phylo$tip.label]
 #source("scripts/resolve_polytomies.R")
 
 res <- readRDS("data/polytomie_RD_results_Nov20.rds")
+res.es <- readRDS("data/polytomie_ES_results.rds")
 dist.all <- get_all_distances_to_root(phylo, as_edge_count=TRUE)
 res$org.rd <- dist.all[1:Ntip(phylo)]
 
@@ -89,7 +90,31 @@ mrd <- function(i, phylo, RD){
   MRD <- mean(RD[which(phylo$tip.label %in% phylo$tip.label[phylo$tip.label %in% colnames(comm)[comm[i,] == 1]])])
   return(MRD)
 }
+RD.sd <- res$sd.rd
+# stub function for parallelization
+mrd.sd <- function(i, phylo, RD.sd){
+  # take tip labels that are in comm matrix with species occurrences, take the mean of their root distances
+  # subsets the matrix to actual occurrences (=1) and then gets relevant colnames
+  MRD.sd <- mean(RD.sd[which(phylo$tip.label %in% phylo$tip.label[phylo$tip.label %in% colnames(comm)[comm[i,] == 1]])])
+  return(MRD.sd)
+}
 
+DR <- res.es$mean.dr
+# stub function for parallelization
+mdr <- function(i, phylo, DR){
+  # take tip labels that are in comm matrix with species occurrences, take the mean of their root distances
+  # subsets the matrix to actual occurrences (=1) and then gets relevant colnames
+  MDR <- mean(DR[which(phylo$tip.label %in% phylo$tip.label[phylo$tip.label %in% colnames(comm)[comm[i,] == 1]])])
+  return(MDR)
+}
+DR.sd <- res.es$sd.es
+# stub function for parallelization
+mdr.sd <- function(i, phylo, DR.sd){
+  # take tip labels that are in comm matrix with species occurrences, take the mean of their root distances
+  # subsets the matrix to actual occurrences (=1) and then gets relevant colnames
+  MDR.sd <- mean(DR.sd[which(phylo$tip.label %in% phylo$tip.label[phylo$tip.label %in% colnames(comm)[comm[i,] == 1]])])
+  return(MDR.sd)
+}
 # calculate observed MRD
 
 # test
@@ -100,23 +125,33 @@ mrd <- function(i, phylo, RD){
 ## for real
 Sys.time()
 MRD <- unlist(mclapply(1:nrow(comm), mrd, phylo=phylo, RD=RD, mc.cores = 4))
+MRD.sd <- unlist(mclapply(1:nrow(comm), mrd.sd, phylo=phylo, RD.sd=RD.sd, mc.cores = 4))
+MDR <- unlist(mclapply(1:nrow(comm), mdr, phylo=phylo, DR=DR, mc.cores = 4))
+MDR.sd <- unlist(mclapply(1:nrow(comm), mdr.sd, phylo=phylo, DR.sd=DR.sd, mc.cores = 4))
 Sys.time()
 
+saveRDS(MRD.sd, "results/MRD_standard_deviation.rds")
+saveRDS(MDR.sd, "results/MDR_standard_deviation.rds")
 # calculate randomized MRDs 
 
 Sys.time()
 for(i in 1:99){
   phylo.rnd <- phylo
   phylo.rnd$tip.label <- sample(phylo.rnd$tip.label)
-  MRD <- cbind(MRD, unlist(mclapply(1:nrow(comm), mrd, phylo=phylo.rnd, RD=RD, mc.cores = 4)))
-  print(paste("replicate", i, "finished"))
+  #MRD <- cbind(MRD, unlist(mclapply(1:nrow(comm), mrd, phylo=phylo.rnd, RD=RD, mc.cores = 4)))
+  MDR <- cbind(MDR, unlist(mclapply(1:nrow(comm), mdr, phylo=phylo.rnd, DR=DR, mc.cores = 4)))
+  #print()
+  cat(paste("replicate", i, "finished"),"\r")
 }
 Sys.time()
 
-colnames(MRD) <- c("obs", paste("rnd.", 1:99, sep=""))
-rownames(MRD) <- rownames(comm)
+# colnames(MRD) <- c("obs", paste("rnd.", 1:99, sep=""))
+# rownames(MRD) <- rownames(comm)
+colnames(MDR) <- c("obs", paste("rnd.", 1:99, sep=""))
+rownames(MDR) <- rownames(comm)
 
-saveRDS(MRD, "data/mrd_Nov2020.rds")
+#saveRDS(MRD, "data/mrd_Nov2020.rds")
+saveRDS(MDR, "data/mdr_Mar2021.rds")
 
 
 # compare to old mrd that included ferns:
@@ -125,7 +160,17 @@ mrd_new <- readRDS("data/mrd_feb2021.rds")
 plot(mrd_new[,1], mrd_old[,1])
 cor(na.omit(mrd_new[,1]), na.omit(mrd_old[,1]))
 
+# compare MRD with DR metric
+mrd_new <- readRDS("data/mrd_feb2021.rds")
+mdr <- readRDS("data/mdr_Mar2021.rds")
 
+par(mfrow=c(2,2))
+plot(mrd_new[,1], mdr[,1], xlab="MRD", ylab="1/ES")
+hist(mdr[,1], breaks=20, xlab="1/ES", main="")
+hist(mrd_new[,1], breaks=20, xlab="MRD", main="")
+plot(res.es$sd.es, res$sd.rd)
+#plot(res.es$sd.es/res.es$mean.es, res$sd.rd/res$mean.rd)
+dev.off()
 #save.image("phylostruct.RData")
 #save(comm, MRD.a_a_a, MRD.b_a_a, ps_no.a_a_a, ps_no.b_a_a, psf_bl.a_a_a, ps_bl.b_a_a, file="MRD_ps.RData")
 

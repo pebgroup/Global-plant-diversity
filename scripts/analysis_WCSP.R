@@ -20,6 +20,8 @@ theme_set(theme_bw())
 # DATA PREP #############################################
 
 
+
+
 ## trees
 phylo <- read.tree("trees/allmb_matched_added_species_Nov20.tre") # allmb_matched_added_species_3.tre
 
@@ -30,6 +32,8 @@ sr <- readRDS("data/comm_Feb2021.rds")
 ## MRD
 #mrd <- readRDS("data/polytomie_RD_results.rds")
 mrd <- readRDS("data/mrd_feb2021.rds")
+mdr <- readRDS("data/mdr_Mar2021.rds")
+
 ## shapefile
 shape <- readOGR("shapefile/level3.shp")
 trueCentroids = as.data.frame(gCentroid(shape,byid=TRUE))
@@ -97,6 +101,7 @@ rm(phylo)
 shape@data$sr <- sr_df$species_richness
 #shape@data$sr_new <- sr_df$species_richness_phylo_data_only
 shape@data$mrd <- mrd[,1]
+shape@data$mdr <- mdr[,1]
 shape@data$mrd_z_score <- z
 shape@data$mrd_z_score_binary <- shape@data$mrd_z_score
 shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score< -1.97)] <- "-"
@@ -104,6 +109,11 @@ shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>1.97)] <- "+"
 shape@data$mrd_z_score_binary[which(shape@data$mrd_z_score>-1.97 & shape@data$mrd_z_score<1.97)] <- "zero"
 shape@data$lng <- trueCentroids[,1]
 shape@data$lat <- trueCentroids[,2]
+
+MRD.sd <- readRDS("results/MRD_standard_deviation.rds")
+MDR.sd  <- readRDS("results/MDR_standard_deviation.rds")
+shape@data$MRD.sd <- MRD.sd
+shape@data$MDR.sd <- MDR.sd
 
 range(shape@data$lat)
 breaks <- seq(-85,85,10)
@@ -117,8 +127,9 @@ lat_bins <- cut(shape@data$lat,
                 labels=tags)
 shape@data$lat_bin <- lat_bins
 
-cor.test(shape@data$sr, shape@data$mrd, method="s")
-cor.test(shape@data$sr, shape@data$mrd_z_score, method="s")
+cor.test(shape@data$sr, shape@data$mrd, method="p")
+cor.test(shape@data$sr, shape@data$mrd_z_score, method="p")
+cor.test(shape@data$sr, shape@data$mdr, method="p")
 
 rm(sr)
 
@@ -145,7 +156,7 @@ library(geosphere)
 shape$area <- areaPolygon(shape)
 
 
-# add biomes
+# add biomes ##########################################################
 biomes <- readRDS("data/biomes_olson.rds")
 biome_names <- c("(sub)tropical moist broadleaf forest",
                  "(sub)tropical dry broadleaf forest",
@@ -163,6 +174,15 @@ biome_names <- c("(sub)tropical moist broadleaf forest",
                  "mangroves")
 names(biomes)[grepl("^X", names(biomes))] <- biome_names
 shape@data <- cbind(shape@data, biomes[,-1])
+
+
+# add paleocim ##########################################################
+paleoclim <-readRDS("data/paleoclim.rds")
+head(paleoclim)
+all(shape@data$LEVEL_3_CO==rownames(paleoclim)) # identical?
+shape@data <- cbind(shape@data, paleoclim)
+names(shape@data)
+
 
 
 # # add human footprint index
@@ -206,9 +226,13 @@ aggr_plot <- aggr(dat[,-grep("_sd", names(dat))], col=c('navyblue','red'), numbe
 # 0.86 complete cases for all variables except SDs AND HFP
 
 
+plot(shp$mrd, shp$mdr)
+cor.test(shp$mrd, shp$mdr, method="s")
+cor.test(shp$sr, shp$mrd)
+cor.test(shp$sr, shp$mdr)
 
-
-
+plot(shp$sr, shp$mrd)
+plot(shp$sr, shp$mdr)
 
 # SR MAP ##########################################################################
 ggplot(shp) + 
@@ -251,6 +275,47 @@ ggsave(filename=paste0("results/mrd_map_", gsub("-", "_", Sys.Date()), ".png"), 
 # ggsave(filename=paste0("results/mrd_z_score_map", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
 # 
 
+# EQUAL SPLITS MAP ##########################################################################
+ggplot(shp) + 
+  geom_sf(aes(fill = mdr), lwd=0.1) + 
+  scale_fill_viridis_c(option = "plasma")+ #, 
+  guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+  theme_void()+
+  theme(legend.position = "bottom")
+ggsave(filename=paste0("results/mdr_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
+
+library(gridExtra)
+grid.arrange(ncol=1,
+ggplot(shp) + 
+  geom_sf(aes(fill = mrd), lwd=0.1) + 
+  scale_fill_viridis_c(option = "plasma")+ #, 
+#  guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+  theme_void()
+,
+ggplot(shp) + 
+  geom_sf(aes(fill = mdr), lwd=0.1) + 
+  scale_fill_viridis_c("1/ES", option = "plasma", trans = "log")+ #, 
+ # guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+  theme_void()
+)
+
+
+
+## uncertainty maps ###########################################################################3
+grid.arrange(ncol=1,
+             ggplot(shp) + 
+               geom_sf(aes(fill = MRD.sd), lwd=0.1) + 
+               scale_fill_viridis_c("MRD sd", option = "plasma")+ #, 
+               #  guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+               theme_void()
+             ,
+             ggplot(shp) + 
+               geom_sf(aes(fill = MDR.sd), lwd=0.1) + 
+               scale_fill_viridis_c("Equal splits SD", option = "plasma")+ #, 
+               # guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+               theme_void()
+)
+cor.test(shp$MRD.sd, shp$MDR.sd)
 
 # SCALED COMPARISON MAPS ########################################################
 # a map that shows....? deviations from the average SR? what about diffs between SR+mrd...
