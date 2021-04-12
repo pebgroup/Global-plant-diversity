@@ -336,14 +336,95 @@ cor.test(shp$MRD.sd, shp$MDR.sd)
 # this shows the largest discrepancies between mrd and sr (smallest values), but it does not tell if its due to low MRD or big SR.
 
 
-# LDG? #########################################################################
-(h.res <- hist(shp$lat, breaks=20))
-ggplot(shp, aes(lat, sr))+
-  geom_point()
-  #geom_text(aes(label=LEVEL_3_CO, col=factor(mrd_z_score_binary)),hjust=0, vjust=0)+
-  #scale_x_log10()+
-cor.test(abs(shp$lat), shp$sr, method = "s")
+# LDG / longitudinal gradients #########################################################################
+## global lat gradient: scatterplot SR + MRD vs latitude
+library(scales)
+(global_scatterplot <- ggplot(shp, aes(lat, sr))+
+  geom_point(alpha=0.5)+
+  scale_y_continuous("species richness", trans = "sqrt")+
+  scale_x_continuous("latitude centroid botanical country")#+
+)
+(global_scatterplot_mrd <- ggplot(shp, aes(lat, mrd))+
+    geom_point(alpha=0.5)+
+    scale_y_continuous("mean root distance")+
+    scale_x_continuous("latitude centroid botanical country")#+
+)
+#, label = unit_format(unit = "K"), limits=c(0,max(shp$sr)/1000)
+#  geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+#  geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
+#geom_text(aes(label=LEVEL_3_CO, col=factor(mrd_z_score_binary)),hjust=0, vjust=0)+
+cor.test(abs(shp$lat), shp$sr, method = "p") # pearson correlation = -0.27
+summary(lm(sr~lat, data=shp[shp$lat<0,]))
+summary(lm(sr~lat, data=shp[shp$lat>0,]))
+# Both hemispheres have significant LDG away from the equator
 
+## continental gradients: scatterplot SR vs latitude for each continent (just use the ones in shapefile)
+#ggplot(moran, aes(x=dist.class)) +
+#  geom_line( aes(y=moransI)) + 
+# geom_line( aes(y=avg.n / coeff)) + # Divide by coef to get the same range
+# scale_y_continuous(
+#   # Features of the first axis
+#   name = "Moran's I",
+#   # Add a second axis and specify its features
+#   sec.axis = sec_axis(~.*coeff, name="Median neighbors")
+# )+
+shpbins <- shp
+ztrans <- function(x){(x - mean(x, na.rm = T)) / sd(x, na.rm = T)}
+range01 <- function(x){(x-min(x, na.rm = TRUE))/(max(x, na.rm = TRUE)-min(x, na.rm = TRUE))}
+shpbins$sr_scaled <- range01(shp$sr)
+shpbins$mrd_scaled <- range01(shp$mrd)
+range(shpbins$mrd_scaled, na.rm=T)
+range(shpbins$sr_scaled, na.rm=T)
+temp <- pivot_longer(shpbins[,c("lat","mrd_scaled", "sr_scaled")], cols = c("mrd_scaled", "sr_scaled"))
+(continent_scatterplot <- ggplot(shpbins, aes(lat, sr_scaled, group=CONTINENT))+
+  geom_point(alpha=0.5)+
+  geom_point(aes(lat, mrd_scaled, col="red"))+
+  scale_y_continuous("species richness", trans = "sqrt")+
+  scale_x_continuous("latitude centroid botanical country")+
+  facet_wrap(~CONTINENT, nrow = 3, scale="free")+
+  geom_smooth(method="loess")
+  #geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+  #geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
+)
+(continent_scatterplot_mrd <- ggplot(shp, aes(lat, mrd, group=CONTINENT))+
+    geom_point(alpha=0.5)+
+    scale_y_continuous("mean root distance", trans = "sqrt")+
+    scale_x_continuous("latitude centroid botanical country")+
+    facet_wrap(~CONTINENT, nrow = 3, scale="free")+
+    geom_smooth(method="loess")
+  #geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+  #geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
+)
+
+
+## same plots for longitude: boxplots for x degree increments for longitude
+(global_scatterplot_lng <- ggplot(shp, aes(lng, sr))+
+    geom_point(alpha=0.5)+
+    scale_y_continuous("species richness", trans = "sqrt")+
+    scale_x_continuous("longitude centroid botanical country")#+
+)
+(global_scatterplot_mrd_lng <- ggplot(shp, aes(lng, mrd))+
+    geom_point(alpha=0.5)+
+    scale_y_continuous("mean root distance")+
+    scale_x_continuous("longitude centroid botanical country")#+
+)
+
+# bins
+breaks <- seq(-180,180,20)
+# specify interval/bin labels
+tags <- seq(-170, 170, 20)
+hist(shape$lng)
+lng_bins <- cut(shape@data$lng, 
+                breaks=breaks, 
+                include.lowest=TRUE, 
+                right=FALSE, 
+                labels=tags)
+shape@data$lng_bin <- lng_bins
+# plot 10 degree bins
+ggplot(shp, aes(lng_bin, sr)) + 
+  geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6)))
+
+shape@data$lat_bin <- lat_bins
 # plot 10 degree bins
 ggplot(shp, aes(lat_bin, sr)) + 
   geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6))) +
