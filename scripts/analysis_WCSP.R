@@ -246,6 +246,35 @@ ggplot(shp) +
   theme(legend.position = "bottom")
 ggsave(filename=paste0("results/sr_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
 
+temp <- readRDS("data/data_for_SEM.rds")
+temp2 <- shp[shp$LEVEL_3_CO %in% rownames(temp),]
+
+#get buffer around tiny countries
+# centroids <- st_centroid(temp2)
+# pt <- centroids[which(temp2$area<1200000000),] 
+# pt_buffer <- st_buffer(pt,2) 
+# # thicker lines
+thicc_lines <-temp2[which(temp2$area<1200000000),]
+# temp2$thicc_lines <- 0.01
+# temp2$thicc_lines[which(temp2$area<1200000000)] <- 3
+lcol <- min(thicc_lines$sr)/max(temp2$sr)
+ucol <- max(thicc_lines$sr)/max(temp2$sr)
+
+ggplot(temp2) + 
+  geom_sf(aes(fill=sr),lwd=0.1) + 
+  geom_sf(data=thicc_lines, lwd=1.5, aes(col=sr), show.legend=F)+
+  scale_colour_viridis_c("SR", option = "plasma", trans = "sqrt", 
+                         begin = lcol, end = sqrt(ucol))+
+  scale_fill_viridis_c("SR", option = "plasma", trans = "sqrt")+ #, 
+  #  scale_fill_gradient("Species richness", guide="colorbar", low="white", high="darkred",
+  #                      limits=c(min(sr_df$species_richness),max(sr_df$species_richness)))+
+  #guides(fill = guide_colourbar(barwidth = 20, direction="vertical"))+ # stretch that colorbar
+  theme_void()+
+  theme(legend.position = c(0.21, 0.3), 
+        legend.background = element_blank(),
+        legend.key = element_blank())
+ggsave(filename=paste0("results/sr_map_red_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
+
 # ggplot(shp) + 
 #   geom_sf(aes(fill = sr_new), lwd=0.1) + 
 #   scale_fill_viridis_c(option = "plasma", trans = "sqrt")+ #, 
@@ -258,13 +287,27 @@ ggsave(filename=paste0("results/sr_map_", gsub("-", "_", Sys.Date()), ".png"), d
 
 
 # MRD MAP ##########################################################################
-ggplot(shp) + 
+lcol <- (min(thicc_lines$mrd)-min(temp2$mrd))/(max(temp2$mrd)-min(temp2$mrd))
+ucol <- (max(thicc_lines$mrd)-min(temp2$mrd))/(max(temp2$mrd)-min(temp2$mrd))
+ggplot(temp2) + 
   geom_sf(aes(fill = mrd), lwd=0.1) + 
+  geom_sf(data=thicc_lines, lwd=1.5, aes(col=mrd), show.legend=F)+
+  scale_colour_viridis_c("SR", option = "plasma", 
+                         begin = lcol, end = ucol)+
   scale_fill_viridis_c(option = "plasma")+ #, 
-  guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
   theme_void()+
-  theme(legend.position = "bottom")
-ggsave(filename=paste0("results/mrd_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
+  theme(legend.position = c(0.21, 0.3), 
+        legend.background = element_blank(),
+        legend.key = element_blank())
+ggsave(filename=paste0("results/mrd_map_red_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
+
+# ggplot(shp) + 
+#   geom_sf(aes(fill = mrd), lwd=0.1) + 
+#   scale_fill_viridis_c(option = "plasma")+ #, 
+#   guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+#   theme_void()+
+#   theme(legend.position = "bottom")
+# ggsave(filename=paste0("results/mrd_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=10, height=7)
 # 
 # 
 # ggplot(shp) + 
@@ -343,12 +386,16 @@ library(scales)
 (global_scatterplot <- ggplot(shp, aes(lat, sr))+
   geom_point(alpha=0.5)+
   scale_y_continuous("species richness", trans = "sqrt")+
-  scale_x_continuous("latitude centroid botanical country")#+
+  scale_x_continuous("latitude centroid botanical country")+
+  geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+  geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
 )
 (global_scatterplot_mrd <- ggplot(shp, aes(lat, mrd))+
     geom_point(alpha=0.5)+
     scale_y_continuous("mean root distance")+
-    scale_x_continuous("latitude centroid botanical country")#+
+    scale_x_continuous("latitude centroid botanical country")+    
+    geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+    geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
 )
 grid.arrange(nrow=1, global_scatterplot, global_scatterplot_mrd)
 #, label = unit_format(unit = "K"), limits=c(0,max(shp$sr)/1000)
@@ -356,13 +403,24 @@ grid.arrange(nrow=1, global_scatterplot, global_scatterplot_mrd)
 #  geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
 #geom_text(aes(label=LEVEL_3_CO, col=factor(mrd_z_score_binary)),hjust=0, vjust=0)+
 cor.test(abs(shp$lat), shp$sr, method = "p") # pearson correlation = -0.27
+cor.test(shp$lat[shp$lat<0], shp$sr[shp$lat<0], method = "p")
+cor.test(shp$lat[shp$lat>0], shp$sr[shp$lat>0], method = "p")
 summary(lm(sr~lat, data=shp[shp$lat<0,]))
 summary(lm(sr~lat, data=shp[shp$lat>0,]))
+summary(lm(sr~abs(lat), data=shp))
+
+cor.test(abs(shp$lat), shp$mrd, method = "p")
+cor.test(shp$lat[shp$lat<0], shp$mrd[shp$lat<0], method = "p")
+cor.test(shp$lat[shp$lat>0], shp$mrd[shp$lat>0], method = "p")
+summary(lm(mrd~lat, data=shp[shp$lat<0,]))
+summary(lm(mrd~lat, data=shp[shp$lat>0,]))
+summary(lm(mrd~abs(lat), data=shp))
 # Both hemispheres have significant LDG away from the equator
 
 ## continental gradients: scatterplot SR vs latitude for each continent (just use the ones in shapefile)
 ztrans <- function(x){(x - mean(x, na.rm = T)) / sd(x, na.rm = T)}
 range01 <- function(x){(x-min(x, na.rm = TRUE))/(max(x, na.rm = TRUE)-min(x, na.rm = TRUE))}
+shpbins <- shp
 shpbins$sr_scaled <- range01(shp$sr)
 shpbins$mrd_scaled <- range01(shp$mrd)
 range(shpbins$mrd_scaled, na.rm=T)
@@ -383,58 +441,136 @@ ggsave("scatterplot_SR_MRD_latitude_continents.png", dpi=600, width=6, height=4)
 
 
 ## same plots for longitude: boxplots for x degree increments for longitude
-(global_scatterplot_lng <- ggplot(shp, aes(lng, sr))+
+# (global_scatterplot_lng <- ggplot(shp, aes(lng, sr))+
+#     geom_point(alpha=0.5)+
+#     scale_y_continuous("species richness", trans = "sqrt")+
+#     scale_x_continuous("longitude centroid botanical country")#+
+# )
+# (global_scatterplot_mrd_lng <- ggplot(shp, aes(lng, mrd))+
+#     geom_point(alpha=0.5)+
+#     scale_y_continuous("mean root distance")+
+#     scale_x_continuous("longitude centroid botanical country")#+
+# )
+
+## LDG stuff reduced data that has been used in SEMs ####
+shpbins <- temp2
+shpbins$sr_scaled <- range01(shpbins$sr)
+shpbins$mrd_scaled <- range01(shpbins$mrd)
+range(shpbins$mrd_scaled, na.rm=T)
+range(shpbins$sr_scaled, na.rm=T)
+shpbins <- st_drop_geometry(shpbins)
+temp <- pivot_longer(shpbins[,c("lat","mrd_scaled", "sr_scaled", "CONTINENT")], cols = c("mrd_scaled", "sr_scaled"))
+
+(continent_scatterplot <- ggplot(temp, aes(lat, value, col=name))+
+    geom_point(alpha=0.5)+
+    scale_y_continuous("scaled MRD and SR")+#,
+    #sec.axis = sec_axis(~.*1, name="mean root distance"))+ 
+    scale_x_continuous("latitude centroid botanical country")+
+    facet_wrap(~CONTINENT, nrow = 3, scale="free_x")+ #, scale="free"
+    geom_smooth(method="loess", se=F)+
+    scale_colour_startrek(labels=c("MRD", "SR"), name="")
+)
+ggsave("scatterplot_SR_MRD_latitude_continents_red.png", dpi=600, width=6, height=4)
+
+(global_scatterplot_red <- ggplot(temp2, aes(lat, sr))+
     geom_point(alpha=0.5)+
     scale_y_continuous("species richness", trans = "sqrt")+
-    scale_x_continuous("longitude centroid botanical country")#+
+    scale_x_continuous("latitude centroid botanical country")+
+    geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+    geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
 )
-(global_scatterplot_mrd_lng <- ggplot(shp, aes(lng, mrd))+
+(global_scatterplot_mrd_red <- ggplot(temp2, aes(lat, mrd))+
     geom_point(alpha=0.5)+
     scale_y_continuous("mean root distance")+
-    scale_x_continuous("longitude centroid botanical country")#+
+    scale_x_continuous("latitude centroid botanical country")+    
+    geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+    geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
 )
+grid.arrange(nrow=1, global_scatterplot_red, global_scatterplot_mrd_red)
+#, label = unit_format(unit = "K"), limits=c(0,max(shp$sr)/1000)
+#  geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+#  geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
+#geom_text(aes(label=LEVEL_3_CO, col=factor(mrd_z_score_binary)),hjust=0, vjust=0)+
+cor.test(abs(temp2$lat), temp2$sr, method = "p") # pearson correlation = -0.38
+cor.test(temp2$lat[temp2$lat<0], temp2$sr[temp2$lat<0], method = "p")
+cor.test(temp2$lat[temp2$lat>0], temp2$sr[temp2$lat>0], method = "p")
+# summary(lm(sr~lat, data=shp[shp$lat<0,]))
+# summary(lm(sr~lat, data=shp[shp$lat>0,]))
+# summary(lm(sr~abs(lat), data=shp))
 
-# bins
-breaks <- seq(-180,180,20)
-# specify interval/bin labels
-tags <- seq(-170, 170, 20)
-hist(shape$lng)
-lng_bins <- cut(shape@data$lng, 
-                breaks=breaks, 
-                include.lowest=TRUE, 
-                right=FALSE, 
-                labels=tags)
-shape@data$lng_bin <- lng_bins
-# plot 10 degree bins
-ggplot(shp, aes(lng_bin, sr)) + 
-  geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6)))
+cor.test(abs(temp2$lat), temp2$mrd, method = "p")
+cor.test(temp2$lat[temp2$lat<0], temp2$mrd[temp2$lat<0], method = "p")
+cor.test(temp2$lat[temp2$lat>0], temp2$mrd[temp2$lat>0], method = "p")
+summary(lm(mrd~lat, data=temp2[temp2$lat<0,]))
+summary(lm(mrd~lat, data=temp2[temp2$lat>0,]))
+summary(lm(mrd~abs(lat), data=temp2))
 
-shape@data$lat_bin <- lat_bins
-# plot 10 degree bins
-ggplot(shp, aes(lat_bin, sr)) + 
-  geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6))) +
-  coord_flip()
-ggsave(filename=paste0("results/lat_bands_SR", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=6, height=4)
+## continental gradients: scatterplot SR vs latitude for each continent (just use the ones in shapefile)
+ztrans <- function(x){(x - mean(x, na.rm = T)) / sd(x, na.rm = T)}
+range01 <- function(x){(x-min(x, na.rm = TRUE))/(max(x, na.rm = TRUE)-min(x, na.rm = TRUE))}
+shpbins <- shp
+shpbins$sr_scaled <- range01(shp$sr)
+shpbins$mrd_scaled <- range01(shp$mrd)
+range(shpbins$mrd_scaled, na.rm=T)
+range(shpbins$sr_scaled, na.rm=T)
+shpbins <- st_drop_geometry(shpbins)
+temp <- pivot_longer(shpbins[,c("lat","mrd_scaled", "sr_scaled", "CONTINENT")], cols = c("mrd_scaled", "sr_scaled"))
 
-kruskal.test(shp$sr, shp$lat_bin)
-pairwise.wilcox.test(shp$sr, shp$lat_bin, p.adjust.method = "fdr")
-
-
-ggplot(shp, aes(lat_bin, mrd_z_score)) + 
-  geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6))) +
-#  scale_y_continuous(limits = c(-20,30))+
-  coord_flip()
-ggsave(filename=paste0("results/lat_bands_MRD_EcolLetFig3", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=6, height=4)
+(continent_scatterplot <- ggplot(temp, aes(lat, value, col=name))+
+    geom_point(alpha=0.5)+
+    scale_y_continuous("scaled MRD and SR")+#,
+    #sec.axis = sec_axis(~.*1, name="mean root distance"))+ 
+    scale_x_continuous("latitude centroid botanical country")+
+    facet_wrap(~CONTINENT, nrow = 3, scale="free_x")+ #, scale="free"
+    geom_smooth(method="loess", se=F)+
+    scale_colour_startrek(labels=c("MRD", "SR"), name="")
+)
+ggsave("scatterplot_SR_MRD_latitude_continents.png", dpi=600, width=6, height=4)
 
 
-table(shp$lat_bin)
-which(shp$lat < -25 | shp$lat > 25)
-shp$trops <- "tropical"
-shp$trops[which(shp$lat < -25 | shp$lat > 25)] <- "non-tropical"
-ggplot(shp, aes(trops, mrd)) + 
-  geom_boxplot(fill=c("blue", "red"))
-ggsave(filename=paste0("results/MRD_EcolLetFig1", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=3, height=3)
-kruskal.test(shp$mrd_z_score, shp$trops)
+
+# 
+# # bins
+# breaks <- seq(-180,180,20)
+# # specify interval/bin labels
+# tags <- seq(-170, 170, 20)
+# hist(shape$lng)
+# lng_bins <- cut(shape@data$lng, 
+#                 breaks=breaks, 
+#                 include.lowest=TRUE, 
+#                 right=FALSE, 
+#                 labels=tags)
+# shape@data$lng_bin <- lng_bins
+# # plot 10 degree bins
+# ggplot(shp, aes(lng_bin, sr)) + 
+#   geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6)))
+# 
+# shape@data$lat_bin <- lat_bins
+# # plot 10 degree bins
+# ggplot(shp, aes(lat_bin, sr)) + 
+#   geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6))) +
+#   coord_flip()
+# ggsave(filename=paste0("results/lat_bands_SR", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=6, height=4)
+# 
+# kruskal.test(shp$sr, shp$lat_bin)
+# pairwise.wilcox.test(shp$sr, shp$lat_bin, p.adjust.method = "fdr")
+# 
+# 
+# ggplot(shp, aes(lat_bin, mrd_z_score)) + 
+#   geom_boxplot(varwidth = TRUE, fill=c(rep("blue",5),rep("red",5),rep("blue",6))) +
+# #  scale_y_continuous(limits = c(-20,30))+
+#   coord_flip()
+# ggsave(filename=paste0("results/lat_bands_MRD_EcolLetFig3", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=6, height=4)
+# 
+# 
+# table(shp$lat_bin)
+# which(shp$lat < -25 | shp$lat > 25)
+# shp$trops <- "tropical"
+# shp$trops[which(shp$lat < -25 | shp$lat > 25)] <- "non-tropical"
+# ggplot(shp, aes(trops, mrd)) + 
+#   geom_boxplot(fill=c("blue", "red"))
+# ggsave(filename=paste0("results/MRD_EcolLetFig1", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=3, height=3)
+# kruskal.test(shp$mrd_z_score, shp$trops)
 
 # # rank ordered distribution of mrd_z_score (figure1 ecol)
 # qqnorm(y=sort(shp$mrd_z_score[shp$trops=="tropical"]),col="red", datax = TRUE)
