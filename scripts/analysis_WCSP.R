@@ -13,6 +13,7 @@ library(rgdal)
 library(rgeos)
 library(phytools)
 library(VIM)
+library(ggsci)
 
 theme_set(theme_bw())
 
@@ -349,6 +350,7 @@ library(scales)
     scale_y_continuous("mean root distance")+
     scale_x_continuous("latitude centroid botanical country")#+
 )
+grid.arrange(nrow=1, global_scatterplot, global_scatterplot_mrd)
 #, label = unit_format(unit = "K"), limits=c(0,max(shp$sr)/1000)
 #  geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
 #  geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
@@ -359,42 +361,25 @@ summary(lm(sr~lat, data=shp[shp$lat>0,]))
 # Both hemispheres have significant LDG away from the equator
 
 ## continental gradients: scatterplot SR vs latitude for each continent (just use the ones in shapefile)
-#ggplot(moran, aes(x=dist.class)) +
-#  geom_line( aes(y=moransI)) + 
-# geom_line( aes(y=avg.n / coeff)) + # Divide by coef to get the same range
-# scale_y_continuous(
-#   # Features of the first axis
-#   name = "Moran's I",
-#   # Add a second axis and specify its features
-#   sec.axis = sec_axis(~.*coeff, name="Median neighbors")
-# )+
-shpbins <- shp
 ztrans <- function(x){(x - mean(x, na.rm = T)) / sd(x, na.rm = T)}
 range01 <- function(x){(x-min(x, na.rm = TRUE))/(max(x, na.rm = TRUE)-min(x, na.rm = TRUE))}
 shpbins$sr_scaled <- range01(shp$sr)
 shpbins$mrd_scaled <- range01(shp$mrd)
 range(shpbins$mrd_scaled, na.rm=T)
 range(shpbins$sr_scaled, na.rm=T)
-temp <- pivot_longer(shpbins[,c("lat","mrd_scaled", "sr_scaled")], cols = c("mrd_scaled", "sr_scaled"))
-(continent_scatterplot <- ggplot(shpbins, aes(lat, sr_scaled, group=CONTINENT))+
+shpbins <- st_drop_geometry(shpbins)
+temp <- pivot_longer(shpbins[,c("lat","mrd_scaled", "sr_scaled", "CONTINENT")], cols = c("mrd_scaled", "sr_scaled"))
+
+(continent_scatterplot <- ggplot(temp, aes(lat, value, col=name))+
   geom_point(alpha=0.5)+
-  geom_point(aes(lat, mrd_scaled, col="red"))+
-  scale_y_continuous("species richness", trans = "sqrt")+
+  scale_y_continuous("scaled MRD and SR")+#,
+                     #sec.axis = sec_axis(~.*1, name="mean root distance"))+ 
   scale_x_continuous("latitude centroid botanical country")+
-  facet_wrap(~CONTINENT, nrow = 3, scale="free")+
-  geom_smooth(method="loess")
-  #geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
-  #geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
+  facet_wrap(~CONTINENT, nrow = 3, scale="free_x")+ #, scale="free"
+  geom_smooth(method="loess", se=F)+
+  scale_colour_startrek(labels=c("MRD", "SR"), name="")
 )
-(continent_scatterplot_mrd <- ggplot(shp, aes(lat, mrd, group=CONTINENT))+
-    geom_point(alpha=0.5)+
-    scale_y_continuous("mean root distance", trans = "sqrt")+
-    scale_x_continuous("latitude centroid botanical country")+
-    facet_wrap(~CONTINENT, nrow = 3, scale="free")+
-    geom_smooth(method="loess")
-  #geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
-  #geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
-)
+ggsave("scatterplot_SR_MRD_latitude_continents.png", dpi=600, width=6, height=4)
 
 
 ## same plots for longitude: boxplots for x degree increments for longitude
