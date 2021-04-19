@@ -12,6 +12,7 @@ library(cowplot)
 library(ggcorrplot)
 library(tidyverse)
 library(data.table)
+library(ppsr)
 theme_set(theme_bw())
 source("scripts/my_corrplot_func.R")
 
@@ -96,12 +97,22 @@ ggsave("results/correlation_march2021.png", width=6, height=5, units = "in", dpi
 cor.dat_no.na<- cor(dat_no.na[,-grep("number|elev",names(dat_no.na))])
 p.dat_no.na <- cor_pmat(dat_no.na[,-grep("number|elev",names(dat_no.na))])
 
-my_corrplot(cor.dat_no.na[,c(1,2,3)], lab=TRUE, p.mat = p.dat_no.na[,c(1,2,3)], insig = "blank",
+my_corrplot(cor.dat_no.na[,c(1,2)], lab=TRUE, p.mat = p.dat_no.na[,c(1,2)], insig = "blank",
            tl.cex = 8, digits = 1, type = "lower", hc.order = FALSE, lab_size = 2.5)+
   theme(axis.text.x = element_text(margin=margin(0,0,0,0)),  # Order: top, right, bottom, left
         axis.text.y = element_text(margin=margin(0,0,0,0)))
 ggsave("results/correlation_mrd_sr_march2021.png", width=6, height=2.1, units = "in", dpi = 600)
 
+t1 <- dat_no.na[,-grep("mdr|number|elev",names(dat_no.na))]
+names(t1) <-gsub("^_", "", names(t1))
+ppsr::score_predictors(t1, y="sr")
+ppsr::visualize_pps(t1, 
+                    do_parallel = TRUE, n_cores = 4,
+                    color_value_high = 'red', 
+                    color_value_low = 'white',
+                    color_text = 'black')+
+  ggtitle("PPSR")+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
 # monitor pet_m + mat_m, mat_m + tra_m for multicollinearity
 # chose tri over elev_sd, they monitor a similar thing and elev_sd has higher correlation with other variables
