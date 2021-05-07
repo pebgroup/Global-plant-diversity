@@ -1,0 +1,770 @@
+---
+title: "SEM_results"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(lavaan)
+library(semPlot)
+library(ggplot2)
+library(tidyr)
+source("clean_semplot_functions.R") # script for modified plotting functions
+
+load("../processed_data/models.RData")
+
+theme_set(theme_bw())
+```
+
+# Model fitting
+Models are assembled from a set of fixed and varying regressions and variables. 
+
+1. Fixed SR regression part: sr_trans ~ soil + sub_trop_mbf + area + mrd
+2. Fixed MRD regression part: mrd ~ pre_m + sea_m + tra_m
+3. additional SR variables:  sub_trop_dbf,  pre_sd, mont_gs, mat_sd, tri, sea_sd, tra_m, tra_sd
+4. additional MRD variables: tri, mat_m, soil, pet_m, sea_sd, pre_sd, area, temp_bmf, tra_sd, pet_sd
+
+Indirect paths were added in case the respective variable was included in the model. They are included to account for the correlation of the respective variables and their indirect effects.
+
+1. soil ~ area
+2. sea_sd ~ area
+3. tra_sd ~ area
+4. sub_trop_mbf ~ pre_m + tra_m + mat_m
+
+All possible combinations (`r nrow(fit2)`)were run and stats collected.
+
+# Model selection
+Starting models were selected based on different criteria:
+
+* highest CFI
+* lowest RMSEA
+* lowest AIC
+* highest combined R^2
+* from a set of models that have okish fits (CFI>0.9, RMSEA<0.12):
+  + lowest AIC
+  + model with max variables from models within a 2point range from lowest AIC (if > 1 model, use lowest AIC)
+  + max number of variables (if > 1 model, use min RMSEA)
+
+To improve initial model fit, all models have been adjusted by including additional, meaningful paths as suggested by the modificationindices() lavaan function.
+
+_____
+CHANGES: 
+
+* new model order based on a) the correct SR and MRD data in GBMs, and b) GBMs run on data excluding elevation mean+sd, and number of biomes as we are not planning on using them anyway. 
+* the maximum Variables model is even better, but misses pet_m - which was not significant anyway
+
+
+```{r data, echo=FALSE}
+good_models <- list(best_cfi.fit.mod4, best_rmsea.fit.mod6, best_global_aic.mod.fit7,
+                    best_abs_aic.fit.mod5, best_aic.fit.mod7, max.var.mod.fit.mod7)
+model_names <- c("lowest RMSEA:", "highest CFI:", "lowest AIC:",
+                 "best AIC, good fit", "low AIC, good fit, max var:", "max Var, good fit:")
+```
+
+# Best CFI, RMSEA, and AIC
+The lowest AIC model is stuck with bad fit.
+
+```{r plots, fig.width=9, fig.height=9}
+par(mfrow=c(2,2))
+model <- good_models[[1]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("A) ", model_names[1], mod.stats), cex.main=1)
+model <- good_models[[2]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("B) ", model_names[2], mod.stats), cex.main=1)
+model <- good_models[[3]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("C) ", model_names[3], mod.stats), cex.main=1)
+# model <- good_models[[4]]
+# semPaths(object = model, layout = "circle2", rotation = 1,
+#          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+#          exoCov = FALSE, exoVar = FALSE,
+#          nCharNodes = 0, fade=FALSE,
+#          edgeLabels = sem_sig_labels(model))
+# mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+# title(paste("D) ", model_names[4], mod.stats), cex.main=1)
+
+```
+
+# Filtered for good fit first (CFI>0.9, RMSEA<0.12): lowest AIC, low AIC + max variables, max variables
+The max var model is still the best.
+
+```{r plots2, fig.width=9, fig.height=9}
+par(mfrow=c(2,2))
+model <- good_models[[4]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("A) ", model_names[4], mod.stats), cex.main=1)
+model <- good_models[[5]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("B) ", model_names[5], mod.stats), cex.main=1)
+model <- good_models[[6]]
+semPaths(object = model, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(model))
+mod.stats <- paste(round(fitmeasures(model, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste("C) ", model_names[6], mod.stats), cex.main=1)
+
+```
+
+<!--
+# Model stats 2B
+```{r, include=FALSE}
+summary(good_models[[6]], standardized = TRUE, fit.measures=TRUE, rsq=TRUE)
+```
+
+# Model stats 2C
+```{r, eval=FALSE}
+summary(good_models[[7]], standardized = TRUE, fit.measures=TRUE, rsq=TRUE)
+```
+-->
+
+
+# Calculate indirect effects
+## Model 2C
+```{r}
+good_models[[6]]@call
+cat(max.var.mod_mod7)
+c2_old <- "
+sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + m*mat_m + sea_m + p*pre_m + tr0*tri
+mrd ~ pre_m + sea_m + tra_m + soil + tri + pet_m + a3*area + sub_trop_mbf
+soil ~ a1*area + ms1*mont_gs
+sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area + tr1*tri
+"
+c2_new <- "
+sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + m*mat_m + sea_m + tr0*tri    # pre_m is missing (super insig if added)
+mrd ~ pre_m + sea_m + tra_m + s1*soil + tri + mat_m + a3*area + sub_trop_mbf                                 # mat instead of pet
+soil ~ a1*area + ms1*mont_gs + trf1*sub_trop_mbf                                                          # subtrop_mbf
+sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area + tr1*tri
+
+# indirect paths on SR
+area_dir := a
+area_ind := a1*s + a2*trf
+area_total := a + a1*s + a2*trf
+mont_gs_dir := ms
+mont_gs_ind := ms1*ms
+mont_gs_total := ms1*ms + ms
+subtrop_mbf_dir := trf
+subtrop_mbf_ind := trf1*trf
+subtrop_mbf_total := trf1*trf +trf
+pre_m_ind := p1*trf
+tra_m_dir := t
+tra_m_ind := t1*trf
+tra_m_total := t1*trf + t
+mat_m_dir :=  m
+mat_m_ind := m1*trf
+mat_m_total :=  m1*trf + m
+tri_dir := tr0
+tri_ind := tr1*trf
+tri_total := tr1*trf + tr0
+
+# indirect paths on MRD
+area_dir_mrd := a3
+area_ind_mrd := a1*s1
+area_tot_mrd := a1*s1 + a3
+soil_mrd := s1
+"
+
+
+c2.fit <- sem(c2_new, data = dat_no.na, estimator="MLM")
+summary(c2.fit, standardized = TRUE, rsq=T, fit.measures=TRUE)
+fitmeasures(c2.fit, c("cfi.robust", "rmsea.robust", "aic", "pvalue.scaled", "chisq.scaled", "df", "chisq.scaling.factor"))
+```
+
+ A popular test statistic is the Satorra-Bentler scaled (mean-adjusted) chi-square, where the usual normal-theory chi-square statistic is divided by a scaling correction to better approximate chi-square under non-normality. 
+
+
+```{r visualization stuff, include=FALSE}
+res <- parameterestimates(c2.fit, standardized = TRUE, boot.ci.type = "bca.simple")
+reg.coef <- res[res$op=="~",]
+reg.coef.sig <- reg.coef[reg.coef$pvalue<=0.5,]
+reg.coef.ns <- reg.coef[reg.coef$pvalue>0.5,]
+plot(sort(reg.coef.sig$std.all))
+abline(h=c(0,0.2,0.4,-0.2))
+k5 <- kmeans(sort(reg.coef.sig$std.all), centers = 5)
+plot(sort(reg.coef.sig$std.all), col=k5$cluster, pch=20)
+k3 <- kmeans(sort(abs(reg.coef.sig$std.all)), centers = 3)
+plot(sort(abs(reg.coef.sig$std.all)), col=k3$cluster, pch=20)
+abline(h=c(0,0.25,0.5))
+#limits: <-0.2, -0.2-0, 0-0.2, 0.2-0.4, <0.5
+# == 3 strength groups: 0 - 0.2 , 0.25 - 0.5, >0.5 that
+
+# sorting path coefficients
+reg.coef.sig[order(abs(reg.coef.sig$std.all)),]
+reg.coef.ns[order(abs(reg.coef.ns$std.all)),]
+
+reg.coef[order(reg.coef$lhs, reg.coef$rhs),] # grouped for regression + alphabetical variables
+
+# plotting tests
+semPaths(object = c2.fit, layout = "tree", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(c2.fit))
+mod.stats <- paste(round(fitmeasures(c2.fit, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste(mod.stats), cex.main=1)
+
+```
+
+
+
+```{r SEM_table_results, include=FALSE}
+pres <- reg.coef[order(reg.coef$lhs, reg.coef$rhs),c("lhs", "op", "rhs", "std.all", "se", "ci.lower", "ci.upper", "pvalue")] # grouped for regression + alphabetical variables
+pres[,c(4:7)] <- round(pres[,c(4:7)],2)
+pres[,c(8)] <- round(pres[,c(8)],3)
+pres[order(pres$lhs, abs(pres$std.all)),]
+
+# from documentation: standardized = TRUE: Logical. If TRUE, standardized estimates are added to the output. Note that SEs and tests are still based on unstandardized estimates. Use standardizedSolution to obtain SEs and test statistics for standardized estimates.... ok great... replace SEs and CIs
+```
+
+
+
+```{r, include=FALSE}
+pres2 <- standardizedSolution(c2.fit)
+pres2 <- pres2[pres2$op=="~" |pres2$op==":=" ,-6]
+pres2[,c(4,5,7,8)] <- round(pres2[,c(c(4,5,7,8))],2)
+pres2[,c(6)] <- round(pres2[,c(c(6))],3)
+pres2[order(pres2$lhs, abs(pres2$est.std), decreasing = T),]
+pres2[order(pres2$op, abs(pres2$est.std), decreasing = T),]
+pres2[order(abs(pres2$est.std), decreasing = T),]
+
+library(writexl)
+write_xlsx(pres2[order(pres2$lhs, abs(pres2$est.std), decreasing = T),],"sem_model_coefficients.xls") 
+# open that table in google sheets and copy paste it from there to avoid manual work and typos!
+
+indi <- pres2[order(pres2$lhs, abs(pres2$est.std), decreasing = T),]
+indi <- indi[grep("ind", indi$lhs),]
+indi
+```
+
+
+# Results
+
+* Strongest effect on SR is soil, followed by mat, TRF coverage, and tra
+* MRD is mostly affected by precipitation, soil and TRF coverage
+_____
+* considering indirect effects, area total: 0.569, TRF: 0.29, 
+* factor with the strongest indirect affect is area, followed by pre_m (which just has indirect effect)
+* MRD has no effect on SR
+* precipitation has a strong negative effect on MRD, but positive effect on TRF, which again negatively affects MRD
+* Area  SR correlation is mostly via soil, very little direct effect
+
+___
+strongest overall direct effects observed in our SEM are soil on SR, pre_m on TRF, and area on soil.
+strongest overall indirect effects are area on SR via soil (0.37) and pre_m on SR via TRF (0.16). Other observed indirect effects are <=0.05.
+
+* MRD has no effect on SR
+* precipitation has a strong negative effect on MRD, but positive effect on TRF, which again negatively affects MRD
+* Area  SR correlation is mostly via soil, very little direct effect
+
+
+
+
+
+## MRD and SR and regions, visuals
+```{r, eval=FALSE}
+library(rgdal)
+library(ggplot2)
+library(tidyverse)
+library(rgeos) # for polygon center
+shape <- readOGR("../shapefile/level3.shp")
+dat_no.na$level3 <- rownames(dat_no.na)
+temp <- merge(dat_no.na, shape@data, by.x="level3", by.y="LEVEL_3_CO", all.x=TRUE)
+p <- ggplot(temp, aes(x=mrd, y=sr_trans))+geom_point(aes(col=CONTINENT), alpha=0)
+# Calculate the hulls for each group
+hull_cont <- temp %>%
+  group_by(CONTINENT) %>%
+  slice(chull(mrd, sr_trans))
+# Get medians for each group
+med.mrd <- tapply(temp$mrd, temp$CONTINENT, median)
+med.sr <- tapply(temp$sr_trans, temp$CONTINENT, median)
+meds <- data.frame(med.mrd, med.sr)
+meds$cont <- rownames(meds)
+# Update the plot with a fill group, and overlay the new hulls
+p +  geom_polygon(data = hull_cont, aes(fill = factor(CONTINENT)), alpha = 0.3)+
+  geom_point(data=meds, mapping=aes(x=med.mrd, y=med.sr, col=cont, size=2))
+
+ggplot(temp, aes(x=mrd, y=sr_trans))+geom_point()+facet_wrap(~CONTINENT)
+```
+
+
+
+
+
+
+
+## SR ~ TRA problem
+The negative effect of TRA on SR is contrary to what we would expect, why?
+
+### Multicolinearity
+vif is 5.4 for mat_m, thats okish.
+
+* removing tra_m from SR regression does not change other coefficients, mat_m effect becomes weaker 
+* removing mat_m changes a lot in the remaining regression: tra_m is not significant anymore: no option cause we neet mat_m anyway
+
+```{r, eval=FALSE}
+library(car)
+par(mfrow=c(2,2))
+plot(dat_no.na$sr_trans~dat_no.na$tra_m)
+abline(lm(dat_no.na$sr_trans~dat_no.na$tra_m))
+
+plot(dat_no.na$sr_trans~dat_no.na$mat_m)
+abline(lm(dat_no.na$sr_trans~dat_no.na$mat_m))
+
+plot(dat_no.na$tra_m~dat_no.na$mat_m)
+abline(lm(dat_no.na$tra_m~dat_no.na$mat_m))
+cor(dat_no.na$tra_m,dat_no.na$mat_m)
+lm1 <- lm(sr_trans ~ soil + sub_trop_mbf + area + mrd + mont_gs + tra_m + mat_m + sea_m + tri, data=dat_no.na) 
+summary(lm1)
+sort(car::vif(lm1))
+
+# remove mat
+lm2 <- lm(sr_trans ~ soil + sub_trop_mbf + area + mrd + mont_gs + tra_m + sea_m + tri, data=dat_no.na) 
+summary(lm2)
+sort(car::vif(lm2))
+# def no multicol any more, however tra is not significant at all and so are other variables
+
+# remove tra
+lm3 <- lm(sr_trans ~ soil + sub_trop_mbf + area + mrd + mont_gs + mat_m + sea_m + tri, data=dat_no.na) 
+summary(lm3)
+sort(car::vif(lm3))
+# does not change the rest of the regression, only the MAT effect becomes weaker 
+
+ggplot(dat_no.na, aes(x=sr_trans, y=tra_m, col=mat_m))+
+  #geom_point(size=2, label=rownames(dat_no.na)) + 
+  geom_text(aes(label=rownames(dat_no.na)))
+
+lm4 <- lm(sr_trans ~ mat_m + tra_m + mat_m*tra_m, data=dat_no.na) 
+summary(lm4)
+sort(car::vif(lm4))
+# tra_m is on the verge of significance.... 
+
+# parts of the mat are via TRF (0.05) direct = 0.31 -
+cor(dat_no.na$sr_trans,dat_no.na$mat_m)
+# correlation SR+mat == 0.32, so the effect is estimated larger than anticipated by the correlation
+
+cor(dat_no.na$sr_trans,dat_no.na$tra_m) # -0.28
+# model says -0.03 via TRF (ns) and 0.16 direct effect
+
+```
+
+### Model-implied correlations
+Comparing the model-implied correlation with the observed correlation:
+
+* SR ~ tra_m model-implied correlation is negative
+* minor overprediction of SR ~ tra_m correlation (== too positive)
+* minor underprediction SR ~ mat_m and SR~ sea_m correlation
+* no sign changes
+
+* fixing the issue by adding a soil ~ mat_m path increases model fit massively
+* fixing the issue by adding a soil ~ mat_m path does not affect the SR ~ tra_m issue
+
+
+```{r, echo=TRUE}
+lavCor(c2.fit) # the observed correlations
+inspect(c2.fit, what="cor.all") # the model-implied correlation among variables
+
+#Large positive values indicate the model underpredicts the correlation; large negative values suggest overprediction of correlation. Usually values |r>.1| are worth closer consideration.
+resid(c2.fit, "cor") # check out correlation mismatches between observed and model-implied correlations
+
+```
+
+Fix:
+```{r}
+c2.fit2 <- update(c2.fit, add="soil ~ mat_m")
+fitmeasures(c2.fit2, c("cfi.robust", "rmsea.robust", "aic", "pvalue.scaled", "chisq.scaled", "df", "chisq.scaling.factor"))
+
+#inspect(c2.fit2, what="cor.all") # the model-implied correlation among variables
+#lavCor(c2.fit2) # the observed correlations
+resid(c2.fit2, "cor")
+par(mfrow=c(1,2))
+semPaths(object = c2.fit, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(c2.fit))
+mod.stats <- paste(round(fitmeasures(c2.fit, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste(mod.stats), cex.main=1)
+semPaths(object = c2.fit2, layout = "circle2", rotation = 1,
+         whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
+         exoCov = FALSE, exoVar = FALSE,
+         nCharNodes = 0, fade=FALSE,
+         edgeLabels = sem_sig_labels(c2.fit2))
+mod.stats <- paste(round(fitmeasures(c2.fit2, c("cfi.robust", "rmsea.robust", "aic")),3), collapse =", ")
+title(paste(mod.stats), cex.main=1)
+```
+
+### Supplement figure regression slopes
+Scatterplot showing all significant effects for SR and MRD. Careful with intercept: the intercept is the mean of Y when all predictors equals zero,  but in SEM all variables are scaled around their mean, all is zero.
+```{r}
+#c2.fit_intercepts <- update(c2.fit, add="sr_trans~1")
+#standardizedSolution(c2.fit_intercepts)
+pres2 <- standardizedSolution(c2.fit)
+pres3 <- pres2[pres2$pvalue<0.05 & pres2$op=="~",]
+sig.sr <- pres3[pres3$lhs %in% c("sr_trans"),]
+plot_sr <- dat_no.na[,c("sr_trans", sig.sr$rhs)]
+plot_sr <- pivot_longer(plot_sr, col=-sr_trans)
+plot_sr$std.all <- rep(sig.sr$est.std, nrow(dat_no.na))
+plot_sr$name[plot_sr$name=="sea_m"] <- "prs_m"
+ggplot(plot_sr, aes(x=value, y=sr_trans))+
+  geom_point(alpha=0.3)+
+  ylab("species richness")+
+  facet_wrap(~name, scales = "free")+
+  geom_smooth(method="lm", se=F)+
+  geom_abline(aes(slope=std.all, intercept=0), col="grey20")
+#ggsave("scatterplot_sig_effects_SR.png",  width=7, height=7, units = "in", dpi = 600)
+
+sig.mrd <- pres3[pres3$lhs %in% c("mrd"),]
+plot_mrd <- dat_no.na[,c("mrd", sig.mrd$rhs)]
+plot_mrd <- pivot_longer(plot_mrd, col=-mrd)
+plot_mrd$std.all <- rep(sig.mrd$est.std, nrow(dat_no.na))
+plot_mrd$name[plot_mrd$name=="sea_m"] <- "prs_m"
+ggplot(plot_mrd, aes(x=value, y=mrd))+
+  geom_point(alpha=0.3)+
+  ylab("species richness")+
+  facet_wrap(~name, scales = "free")+
+  geom_smooth(method="lm", se=F)+
+  geom_abline(aes(slope=std.all, intercept=0), col="grey20")
+#ggsave("scatterplot_sig_effects_MRD.png",  width=5, height=5, units = "in", dpi = 600)
+```
+Area effect is buffered by indirect effect via soil. Inspect tra_m and sea_m for SR, and area MRD.
+
+
+### Simpsons paradox
+Sign reversal: clusters in the data show reversed sign as group regression. An extreme form of confounding effect.
+
+tra_m and sea_m for SR
+```{r, include=FALSE}
+ggplot(dat_no.na, aes(x=tra_m, y=sr_trans, col=mat_m))+
+  geom_point()
+# create intervals for mat_m
+n=10
+dat_no.na$mat_breaks <- c(1:n)[cut(dat_no.na$mat_m, breaks=n)]
+# create intervals for tra_m
+n=10
+dat_no.na$tra_breaks <- c(1:n)[cut(dat_no.na$tra_m, breaks=n)]
+# create intervals for sea_m
+n=10
+dat_no.na$sea_breaks <- c(1:n)[cut(dat_no.na$sea_m, breaks=n)]
+```
+
+```{r, inlcude=FALSE}
+library(Simpsons)
+simp_tra1<- Simpsons(tra_m, sr_trans, clusterid = mat_breaks, data=dat_no.na, nreps=500) # Simpson's Paradox! some clusters are significantly different and in the opposite direction compared to the group
+simp_tra2<-Simpsons(tra_m, sr_trans, clusterid = sea_breaks, data=dat_no.na, nreps=500) # no sign of simpsons paradox
+simp_sea1<-Simpsons(sea_m, sr_trans, clusterid = mat_breaks, data=dat_no.na, nreps=500) # Simpson's Paradox! some clusters are significantly different and in the opposite direction compared to the group
+simp_sea2<-Simpsons(sea_m, sr_trans, clusterid = tra_breaks, data=dat_no.na[!dat_no.na$tra_breaks==10,], nreps=500) # exclude cluster 10 (sample size=1). nothing
+cor(dat_no.na[,c("sr_trans", "mat_m", "sea_m", "tra_m")])
+```
+
+
+```{r}
+library(gridExtra)
+datp <- dat_no.na
+names(datp) <- gsub("sea_","prs_", names(datp))
+p <- arrangeGrob(nrow=1, widths=c(0.75,1),
+ggplot(datp, aes(x=tra_m, y=sr_trans, col=factor(mat_breaks)))+
+  geom_point()+
+  scale_color_viridis_d(option = "plasma", 'MAT bins')+
+  #scale_color_gradient2('MAT intervals', low = "blue", mid = "yellow", high = "red", midpoint = 5)
+  #scale_color_continuous("MAT intervals")+
+  guides(colour = guide_legend(reverse=T))+
+  geom_smooth(method = "lm", se=F, col="grey")+
+  geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
+  theme(legend.position = "none")+
+  ggtitle("a)")+
+  ylab("species richness")
+,
+ggplot(datp, aes(x=prs_m, y=sr_trans, col=factor(mat_breaks)))+
+  geom_point()+
+  scale_color_viridis_d(option = "plasma", 'MAT bins')+
+  guides(colour = guide_legend(reverse=T))+
+  geom_smooth(method = "lm", se=F, col="grey")+
+  geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
+  ggtitle("b)")+
+  ylab("species richness")
+)
+plot(p)
+ggsave("simpsons_paradox_SR.png", p, width=7, height=4, units = "in", dpi = 600)
+```
+
+* Keeping MAT constant, the influence of tra_m becomes positive for most cases, while the overall connection is negative. This is an extreme form of confounding effect which is not detected by the vif().
+
+Biological reality: The general connection between temperature range and species richness is negative and seems to be mostly driven by very high values in low TRA regions (=tropics). However within regions of equal average (temperate!) temperature, tra_m has a positive effect on SR.
+
+What are the regions with low TRA and low SR? Are they species poor because of island/area/any special characteristics that unite them?
+
+```{r}
+grid.arrange(nrow=1,
+ggplot(dat_no.na, aes(x=tra_m, y=sr_trans, col=mat_breaks))+
+  geom_text(label=rownames(dat_no.na))+
+  geom_smooth(method = "lm", se=F)+
+  geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
+  scale_colour_gradient(high = "#FF0000FF", low= "#FFFF00FF")
+,
+ggplot(dat_no.na, aes(x=tra_m, y=sr_trans, col=mat_breaks))+
+  geom_point(aes(size=area))+
+  geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
+  scale_colour_gradient(high = "#FF0000FF", low= "#FFFF00FF")
+)
+```
+Small countries tend to have less species, nothing new.
+
+Area, mat_m and tri for MRD.
+```{r, include=FALSE}
+# create intervals for pre_m, soil, tri
+n=10
+dat_no.na$pre_breaks <- c(1:n)[cut(dat_no.na$pre_m, breaks=n)]
+dat_no.na$soil_breaks <- c(1:n)[cut(dat_no.na$soil, breaks=n)]
+dat_no.na$tri_breaks <- c(1:n)[cut(dat_no.na$tri, breaks=n)]
+dat_no.na$area_breaks <- c(1:n)[cut(dat_no.na$area, breaks=n)]
+dat_no.na$area_breaks[dat_no.na$area_breaks>7] <- 8 # merge biggest intervals
+table(dat_no.na$pre_breaks)
+table(dat_no.na$soil_breaks)
+table(dat_no.na$tri_breaks)
+table(dat_no.na$area_breaks)
+
+```
+
+```{r, include=FALSE}
+# run for mat_m with all possible breaks
+# simp_mat1 <- Simpsons(mat_m, mrd, clusterid = tra_breaks, data=dat_no.na[!dat_no.na$tra_breaks==10,], nreps=500) # simpsons paradox detected
+# ggplot(dat_no.na, aes(x=mat_m, y=mrd, col=tra_breaks))+ #[dat_no.na$soil_breaks %in% c(1,2,3),]
+#   geom_point()+
+#   scale_color_viridis_c(option = "plasma", 'tra intervals')+
+#   geom_smooth(method = "lm", se=F, col="grey")+
+#   geom_smooth(method = "lm", aes(group=tra_breaks), se=F)
+
+# run for area with all possible breaks: signs in soil and def pre
+ggplot(dat_no.na, aes(x=area, y=mrd, col=soil_breaks))+ 
+  geom_point()+
+  scale_color_viridis_c(option = "plasma", 'soil intervals')+
+  geom_smooth(method = "lm", se=F, col="grey")+
+  geom_smooth(method = "lm", aes(group=soil_breaks), se=F)
+simp_area1 <- Simpsons(area, mrd, clusterid = soil_breaks, data=dat_no.na, nreps=500) # package says no (cluster 1 is just 2 datapoints, ignore), looks like yes?
+ggplot(dat_no.na, aes(x=area, y=mrd, col=pre_breaks))+ 
+  geom_point()+
+  scale_color_viridis_c(option = "plasma", 'pre intervals')+
+  geom_smooth(method = "lm", se=F, col="grey")+
+  geom_smooth(method = "lm", aes(group=pre_breaks), se=F)
+simp_area2 <- Simpsons(area, mrd, clusterid = pre_breaks, data=dat_no.na[dat_no.na$pre_breaks!=10,], nreps=500) # cluster 1 has simpsons paradox and holds almsot half of the data (135 data points)
+simp_area3 <- Simpsons(area, mrd, clusterid = tra_breaks, data=dat_no.na[!dat_no.na$tra_breaks==10,], nreps=500) #
+simp_area4 <- Simpsons(area, mrd, clusterid = tri_breaks, data=dat_no.na, nreps=500) #
+
+# # run for tri
+# ggplot(dat_no.na, aes(x=tri, y=mrd, col=area_breaks))+ 
+#   geom_point()+
+#   scale_color_viridis_c(option = "plasma")+
+#   geom_smooth(method = "lm", se=F, col="grey")+
+#   geom_smooth(method = "lm", aes(group=area_breaks), se=F)
+# # interval 1 includes lowest area values which heavily dominates the data and is slightly positive
+# simp_tri1 <- Simpsons(tri, mrd, clusterid=area_breaks, data=dat_no.na, nreps=500) # 2 paradox detected
+# 
+# ggplot(dat_no.na, aes(x=tri, y=mrd, col=pre_breaks))+ 
+#   geom_point()+
+#   scale_color_viridis_c(option = "plasma")+
+#   geom_smooth(method = "lm", se=F, col="grey")+
+#   geom_smooth(method = "lm", aes(group=pre_breaks), se=F)
+# simp_tri2 <- Simpsons(tri, mrd, clusterid = pre_breaks, data=dat_no.na[!dat_no.na$pre_breaks==10,], nreps=500) # paradox, data heavy
+
+```
+
+```{r}
+library(gridExtra)
+#p <- arrangeGrob(nrow=1, #widths=c(0.75,1, 1),
+ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
+  geom_point()+
+  scale_x_continuous("area", trans="sqrt")+
+  scale_color_viridis_d(option = "plasma", 'soil bins')+
+  geom_smooth(method = "lm", se=F, col="grey")+
+  geom_smooth(method = "lm", aes(group=soil_breaks), se=F)+
+  guides(colour = guide_legend(reverse=T))#+
+#  ggtitle("a)")
+#,
+# ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(pre_breaks)))+ 
+#   geom_point()+
+#   scale_x_continuous("area", trans="sqrt")+
+#   scale_color_viridis_d(option = "plasma", 'pre bins')+
+#   geom_smooth(method = "lm", se=F, col="grey")+
+#   geom_smooth(method = "lm", aes(group=pre_breaks), se=F)+
+#   guides(colour = guide_legend(reverse=T))+
+#   ggtitle("b)")
+# )
+# plot(p)
+ggsave("simpsons_paradox_MRD.png", width=4, height=4, units = "in", dpi = 600)
+
+
+```{r, include=FALSE}
+c2_new <- "
+sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + m*mat_m + sea_m + tr0*tri    # pre_m is missing (super insig if added)
+mrd ~ pre_m + sea_m + tra_m + soil + tri + mat_m + a3*area + sub_trop_mbf                                 # mat instead of pet
+soil ~ a1*area + ms1*mont_gs + trf1*sub_trop_mbf                                                          # subtrop_mbf
+sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area + tr1*tri
+"
+
+sp <- "
+sr_trans ~ tra_m + mat_m + area
+"
+# this model shows negative influence of TRA and positive of MAT
+sp.fit <- sem(sp, data = dat_no.na, estimator="MLM")
+summary(sp.fit, standardized = TRUE, rsq=T, fit.measures=TRUE)
+fitmeasures(sp.fit, c("cfi.robust", "rmsea.robust", "aic", "pvalue.scaled", "chisq.scaled", "df", "chisq.scaling.factor"))
+
+sp1 <- "
+sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + tr0*tri + mat_m   # pre_m is missing (super insig if added)
+mrd ~ pre_m + sea_m + tra_m + soil + tri + mat_m + a3*area + sub_trop_mbf                                 # mat instead of pet
+soil ~ a1*area + ms1*mont_gs + trf1*sub_trop_mbf                                                          # subtrop_mbf
+sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area + tr1*tri
+"
+sp1.fit <- sem(sp1, data = dat_no.na, estimator="MLM")
+summary(sp1.fit, standardized = TRUE, rsq=T, fit.measures=TRUE)
+fitmeasures(sp1.fit, c("cfi.robust", "rmsea.robust", "aic", "pvalue.scaled", "chisq.scaled", "df", "chisq.scaling.factor"))
+```
+<!--
+Adding sub trop mbf to the SR destroys the negative influence of TRA.
+Adding the TRF regression leaves tra meaningless for SR and negative influence via TRF - net negative!
+Adding mat_m to SR does not change tra_m at all
+Adding tri doubles the tra_m positive influence, but still not significant
+Adding mrd and mont_gs does nothing
+Adding sea_m to SR makes tra positive and significant
+
+<!-- The negative influence from TRA works via TRF, not direct, and is obscured by seasonality
+Removing sea and mat both make the problem better, however they do not really fix it and with mat we lose a significant variable, plus seasonality also becomes insignificant.
+In the full model with mat and sea and TRF, the effects are just added and turn the initially weak negative effect into an barely significant positive effect.
+-->
+
+
+### OPTIONS
+Simpsons PAradox detected in SR for for tra_m  and sea_m 
+* Removing variables: sea and mat both make the "problem" better, however they do not fix it and come with unwanted side effects (with mat we lose a significant variable, plus seasonality also becomes insignificant)
+* don`t change anything: both signals are real and should be interpreted scale dependent: global vs regional. Temperature range has a positive effect on SR in some regions of equal temperature, which are mostly temperate regions.
+
+## Interpretation for tra_m:
+both signals are real and should be interpreted scale dependent: global vs regional. Temperature range has a negative effect on SR on a global scale, but a positive effect in most regions of equal temperature, which are mostly temperate regions. In the context of a multivariate regression, these regional patterns dominate the global correlation.
+Temperature stability is good for SR in hot regions, but not in temperate regions.
+
+## Interpretation for sea_m:
+Precipitation seasonality is positively correlated with SR globally, within some temperature regions however seasonality proves negative.
+
+For both tra + sea, the two groups containing hottest regions show an influence pattern opposed to the more temperate regions.
+
+Simpsons PAradox detected in MRD for area
+--> consider also  indirect influences! area has positive effect via soil
+
+## Interpretation for area
+Whats our expectation of area for MRD? positive? 
+We expect the negative influence of area on MRD to be the result of two effects: part of the positive influence as assessed in the correlation is deviated via soil as indirect effect, and part is a Simpsons paradox as shown in figure S6: In regions with many different soil types and low precipitation, area has a negative influence on MRD. what are those regions...?
+
+## which regions show different patterns for tra_m?
+```{r, eval=FALSE}
+n=10
+dat_no.na$mat_breaks <- c(1:n)[cut(dat_no.na$mat_m, breaks=n)]
+ggplot(dat_no.na, aes(x=tra_m, y=sr_trans))+
+  geom_point()+
+  scale_color_viridis_c(option = "plasma", 'MAT intervals')+
+  geom_smooth(method = "lm", se=F, col="grey")+
+  geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
+  facet_wrap(~mat_breaks)
+# get slopes
+n=10
+dat_no.na$mat_breaks <- c(1:n)[cut(dat_no.na$mat_m, breaks=n)]
+(res <- t(sapply(split(dat_no.na, list(dat_no.na$mat_breaks)),
+         function(subd){summary(lm(sr_trans ~ tra_m, data = subd))$coefficients[2,c(1,4)]}))) # extract slope and p value
+res <- as.data.frame(res)
+# got more positive significant conenctions than negative ones
+# get mean mat_m per group
+mat_mean <- tapply(dat_no.na$mat_m, dat_no.na$mat_breaks, mean)
+res$mat <- as.numeric(mat_mean)
+names(res)[2] <- "pvalue"
+ggplot(res, aes(x=mat, y=Estimate))+
+  geom_point(aes(col=pvalue<0.05))+
+  scale_color_manual(values = c("grey", "black"))+
+  scale_y_continuous("regression coefficient")+
+  theme(legend.position = "null", 
+        plot.background = element_blank(),
+    panel.background = element_blank())+
+  geom_hline(yintercept = 0, lty=2)
+ggsave("slope_mat.png",width=2.5, height=2,units="in")
+
+# check countries with mat_m >0
+library(sf)
+shp <- st_as_sf(shape)
+shp$tra_dynamics <- "positive"
+shp$tra_dynamics[shp$LEVEL_3_CO %in% dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
+# add slopes for all bins
+res$mat_breaks <- c(1:10)
+#res <- as.data.frame(res)
+dat_no.na <- merge(dat_no.na, res, all.x=TRUE)
+shp <- merge(shp, dat_no.na[,c("level3","Estimate", "pvalue", "mat_m")], by.x="LEVEL_3_CO", by.y="level3", all.x=TRUE)
+
+# my_plot <- ggplot(shp) + 
+#   geom_sf(aes(fill = tra_dynamics), lwd=0.1) + 
+#   scale_fill_viridis_d(option = "plasma")+  
+#   #guides(fill = guide_colourbar(barwidth = 20, direction="horizontal"))+ # stretch that colorbar
+#   theme_void()+
+#   theme(legend.position = "bottom")
+# library(cowplot)
+# library(png)
+# logo_file <- readPNG("slope_mat.png")
+# my_plot_2 <- ggdraw() +
+#   draw_image(logo_file,  x = -0.35, y = -0.1, scale = .3) +
+#   draw_plot(my_plot)
+# my_plot_2
+# #ggsave(filename=paste0("results/tra_dynamic_regions_map_", gsub("-", "_", Sys.Date()), ".png"), dpi=600, width=8, height=5)
+
+shp$Estimate2 <- shp$Estimate
+shp$Estimate2[shp$pvalue>0.05] <- NA
+(my_plot3 <- ggplot(shp) + 
+  geom_sf(aes(fill = Estimate2), lwd=0.1) + 
+#scale_fill_viridis_c(option = "viridis", "Regression slope")+ 
+ scale_fill_continuous("Regression slope")+
+  theme_void()+
+theme(legend.position = "bottom"))
+logo_file <- readPNG("slope_mat.png")
+my_plot_4 <- ggdraw() +
+  draw_image(logo_file,  x = -0.35, y = -0.05, scale = .3) +
+  draw_plot(my_plot3)
+my_plot_4
+ggsave("tra_scale_map.png", dpi=600, width=10, height=7)
+```
+
+
+
+
+
+
+
+" SAVE
+```{r}
+save.image("../processed_data/results.RData")
+```
+
