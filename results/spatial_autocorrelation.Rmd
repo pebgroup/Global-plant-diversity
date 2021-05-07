@@ -93,9 +93,8 @@ moran$dist.class[which.max(moran$moransI)]
 
 
 # Residuals spatial autocorrelation
-On https://github.com/jebyrnes/spatial_correction_lavaan there is code to 
-
-* fix the no residuals problem (no latent varaible gives all residuals being zero)
+Uses code from https://github.com/jebyrnes/spatial_correction_lavaan to fix getting residuals 
+problem (no latent varaible gives all residuals being zero)
 * is a lacSpatialCorrect.R function
 * correct residual estimation: residuals_lavaan()
 *predict_lavaan()

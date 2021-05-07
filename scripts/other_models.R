@@ -67,7 +67,7 @@ dat_no.na
 first <- grep("(sub)", names(dat_no.na))[1]
 last <- grep("xeric", names(dat_no.na))
 names(dat_no.na)[first:last] <- c("sub_trop_mbf", "sub_trop_dbf", "sub_trop_cf", "temp_bmf", "temp_cf",
-                                    "boreal_f_taiga", "_sub_trop_gss", "temp_gss", "mont_gs", "tundra",
+                                    "boreal_f_taiga", "sub_trop_gss", "temp_gss", "mont_gs", "tundra",
                                     "medit_fws", "deserts_x_shrub")
 
 
@@ -84,24 +84,28 @@ dat_no.na <- na.omit(dat_no.na)
 dim(dat_no.na)
 saveRDS(dat_no.na, "data/data_for_SEM.rds")
 
-cor.dat_no.na<- cor(dat_no.na[,-grep("sr|mrd|mdr|number|elev",names(dat_no.na))])
-p.dat_no.na <- cor_pmat(dat_no.na[,-grep("sr|mrd|mdr|number|elev",names(dat_no.na))])
+# rename sea to prs
+names(dat_no.na) <- gsub("sea_","prs_", names(dat_no.na))
+cor.dat_no.na<- cor(dat_no.na[,-grep("mdr|number|elev",names(dat_no.na))])
+p.dat_no.na <- cor_pmat(dat_no.na[,-grep("mdr|number|elev",names(dat_no.na))])
 
 my_corrplot(cor.dat_no.na, lab=TRUE, p.mat = p.dat_no.na, insig = "blank",
-            tl.cex = 8, digits = 1, type = "lower", hc.order = FALSE, lab_size = 3, highlight = TRUE)+
+            tl.cex = 8, digits = 1, type = "lower", hc.order = FALSE,
+            lab_size = 3, highlight = TRUE)+
   theme(axis.text.x = element_text(margin=margin(0,0,0,0)),  # Order: top, right, bottom, left
-        axis.text.y = element_text(margin=margin(0,0,0,0)))
-ggsave("results/correlation_march2021.png", width=6, height=5, units = "in", dpi = 600)
+        axis.text.y = element_text(margin=margin(0,0,0,0)),
+        plot.margin = margin(0, 0, 0, 0, "cm"))
+ggsave("results/correlation_april2021.png", width=7, height=6, units = "in", dpi = 600)
 
 # correlations with SR and MRD
-cor.dat_no.na<- cor(dat_no.na[,-grep("number|elev",names(dat_no.na))])
-p.dat_no.na <- cor_pmat(dat_no.na[,-grep("number|elev",names(dat_no.na))])
-
-my_corrplot(cor.dat_no.na[,c(1,2)], lab=TRUE, p.mat = p.dat_no.na[,c(1,2)], insig = "blank",
-           tl.cex = 8, digits = 1, type = "lower", hc.order = FALSE, lab_size = 2.5)+
-  theme(axis.text.x = element_text(margin=margin(0,0,0,0)),  # Order: top, right, bottom, left
-        axis.text.y = element_text(margin=margin(0,0,0,0)))
-ggsave("results/correlation_mrd_sr_march2021.png", width=6, height=2.1, units = "in", dpi = 600)
+# cor.dat_no.na<- cor(dat_no.na[,-grep("number|elev",names(dat_no.na))])
+# p.dat_no.na <- cor_pmat(dat_no.na[,-grep("number|elev",names(dat_no.na))])
+# 
+# my_corrplot(cor.dat_no.na[,c(1,2)], lab=TRUE, p.mat = p.dat_no.na[,c(1,2)], insig = "blank",
+#            tl.cex = 8, digits = 1, type = "lower", hc.order = FALSE, lab_size = 2.5)+
+#   theme(axis.text.x = element_text(margin=margin(0,0,0,0)),  # Order: top, right, bottom, left
+#         axis.text.y = element_text(margin=margin(0,0,0,0)))
+# ggsave("results/correlation_mrd_sr_march2021.png", width=6, height=2.1, units = "in", dpi = 600)
 
 t1 <- dat_no.na[,-grep("mdr|number|elev",names(dat_no.na))]
 names(t1) <-gsub("^_", "", names(t1))
@@ -183,6 +187,7 @@ gbmFit4_mrd$results[row.names(gbmFit4_mrd$bestTune),]
 
 
 # model without number of biomes and elevationSD variables ########################
+dat_no.na <- dat_no.na[,-grep("mdr", names(dat_no.na))]
 set.seed(591)
 gbmFit4_red <- train(sr ~ ., data = dat_no.na[,-grep("elev_sd|number", names(dat_no.na))], method = "gbm", 
                      trControl = gbmControl, verbose=FALSE,
@@ -204,7 +209,7 @@ red_mrd <- ggplot(summary(gbmFit4_red_mrd), aes(x=reorder(var, rel.inf), y=rel.i
   xlab("")+ylab("Relative influence")
 
 plot_grid(red_sr, red_mrd, labels = c("A", "B"), ncol = 2)
-ggsave("results/varImp_full_gbm_feb2021_no_elev+nobiomes.png", width=8, height=4, units = "in", dpi = 600)
+ggsave("results/varImp_full_gbm_feb2021_no_elev+nobiomes.png", width=7, height=4, units = "in", dpi = 600)
 
 # alternative back to back plot
 df <- rbind(summary(gbmFit4_red), summary(gbmFit4_red_mrd))
