@@ -854,7 +854,7 @@ mat&lt;sub&gt;
               <y:Geometry height="48.5" width="134.02356035373282" x="1895.3349891325809" y="975.7921527777769"/>
               <y:Fill color="#FF6600" transparent="false"/>
               <y:BorderStyle color="#000000" type="dashed" width="1.0"/>
-              <y:NodeLabel alignment="left" autoSizePolicy="node_width" backgroundColor="#FF6600" borderDistance="0.0" fontFamily="Dialog" fontSize="11" fontStyle="plain" hasLineColor="false" height="16.8046875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="134.02356035373282" x="0.0" xml:space="preserve" y="0.0">Environmental stability</y:NodeLabel>
+              <y:NodeLabel alignment="left" autoSizePolicy="node_width" backgroundColor="#FF6600" borderDistance="0.0" fontFamily="Dialog" fontSize="11" fontStyle="plain" hasLineColor="false" height="16.8046875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="134.02356035373282" x="0.0" xml:space="preserve" y="0.0">environmental stability</y:NodeLabel>
               <y:Shape type="rectangle"/>
               <y:State closed="false" closedHeight="50.0" closedWidth="50.0" innerGraphDisplayEnabled="false"/>
               <y:Insets bottom="5" bottomF="5.0" left="5" leftF="5.0" right="5" rightF="5.0" top="5" topF="5.0"/>
@@ -895,8 +895,8 @@ tra&lt;sub&gt;
               <y:Geometry height="19.0" width="39.0" x="1911.57266126637" y="998.5968402777769"/>
               <y:Fill color="#FFFFFF" transparent="false"/>
               <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dingbats" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="21.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="35.0" x="2.0" xml:space="preserve" y="-1.0">&lt;html&gt;
-sea&lt;sub&gt;
+              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dingbats" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="21.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="32.0" x="3.5" xml:space="preserve" y="-1.0">&lt;html&gt;
+prs&lt;sub&gt;
 &lt;span style="font-size:90%"&gt;x̄&lt;/span&gt;
 &lt;/sub&gt;
 &lt;/html<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>

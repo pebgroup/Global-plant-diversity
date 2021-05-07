@@ -25,7 +25,7 @@
 &lt;div style="text-align:center"&gt;
 SR&lt;br&gt;
 &lt;span style="font-size:80%"&gt;
-R²=0.66 &lt;/span&gt;
+R²=0.65 &lt;/span&gt;
 &lt;/div&gt;
 &lt;/html&gt;
 </y:NodeLabel>
@@ -51,7 +51,7 @@ R²=0.66 &lt;/span&gt;
 &lt;div style="text-align:center"&gt;
 MRD&lt;br&gt;
 &lt;span style="font-size:80%"&gt;
-R²=0.41 &lt;/span&gt;
+R²=0.50 &lt;/span&gt;
 &lt;/div&gt;
 &lt;/html&gt;
 </y:NodeLabel>
@@ -121,7 +121,7 @@ R²=0.6 &lt;/span&gt;
 &lt;div style="text-align:center"&gt;
 soil&lt;br&gt;
 &lt;span style="font-size:80%"&gt;
-R²=0.28 &lt;/span&gt;
+R²=0.27 &lt;/span&gt;
 &lt;/div&gt;
 &lt;/html&gt;
 </y:NodeLabel>
@@ -394,8 +394,8 @@ tra&lt;sub&gt;
           <y:Geometry height="19.0" width="34.80555555555554" x="522.5972222222222" y="354.22363511265894"/>
           <y:Fill color="#FF6600" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="22.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="35.0" x="-0.0972222222221717" xml:space="preserve" y="-1.5">&lt;html&gt;
-sea&lt;sub&gt;
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="22.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="32.0" x="1.4027777777778283" xml:space="preserve" y="-1.5">&lt;html&gt;
+prs&lt;sub&gt;
 &lt;span style="font-size:90%"&gt;x̄&lt;/span&gt;
 &lt;/sub&gt;
 &lt;/html<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
@@ -719,7 +719,7 @@ sea&lt;sub&gt;
           <y:Path sx="0.0" sy="-18.5" tx="16.771303444699015" ty="-18.514531658536782">
             <y:Point x="497.1383972167969" y="407.312255859375"/>
           </y:Path>
-          <y:LineStyle color="#FF0000" type="dashed" width="1.0"/>
+          <y:LineStyle color="#FF0000" type="line" width="1.0"/>
           <y:Arrows source="none" target="standard"/>
           <y:Arc height="-57.407352447509766" ratio="-1.485920786857605" type="fixedRatio"/>
         </y:ArcEdge>
