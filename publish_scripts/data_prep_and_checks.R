@@ -71,7 +71,7 @@ gbm_mrd <- ggplot(summary(gbm_MRD), aes(x=reorder(var, rel.inf), y=rel.inf))+
   coord_flip()+
   xlab("")+ylab("Relative influence")
 
-plot_grid(gbm_sr, gbm_mrd, labels = c("A", "B"), ncol = 2)
+plot_grid(gbm_sr, gbm_mrd, labels = c("a)", "b)"), ncol = 2)
 ggsave("publish_figures/varImp_gbm_April2021.png", width=7, height=4, units = "in", dpi = 600)
 
 
@@ -181,7 +181,7 @@ dat_no.na$tra_sd <- sqrt(dat_no.na$tra_sd)
 dat_no.na$prs_sd <- sqrt(dat_no.na$prs_sd)  
 
 #  scale data #############################################################################################
-ztrans <- function(x){(x - mean(x)) / sd(x)} #z-transformation to avoid variance issues
+#z-transformation to avoid variance issues
 dat_no.na <- dat_no.na[,-grep("level3",names(dat_no.na))]
 dat_no.na <- apply(dat_no.na, 2, ztrans)
 dat_no.na <- as.data.frame(dat_no.na)
