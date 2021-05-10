@@ -1,8 +1,8 @@
 # May 4, 2021
-# Written by Melanie Tietje
+# Written by Melanie Tietje, contributions by Wolf L. Eiserhardt
 #  
 # 
-# This script sources all other analysis scripts.
+# This script sources all analysis scripts. 
 # 
 # Please note that the most time consuming calculations are muted by the following 
 # and instead the results are loaded where needed. This affects scripts to
@@ -10,37 +10,38 @@
 # variables and run automated SEM selection procedure. Several analyses are
 # set up for parallel processing (up to 16 cores) to speed up performance.
 # 
-# Processing partly large datafiles, tested on a linux system (Ubuntu 20.04) with 
+# Processing partly large data files, tested on a linux system (Ubuntu 20.04) with 
 # Intel© Core™ i7-8565U CPU @ 1.80GHz × 4 , 16GB RAM, RStudio Version 1.3.1073
-# All used R packages are cited in the supplement citation file
+# All used R packages are cited in the supplement
 
-set_running_polytomies = FALSE
-set_running_species=FALSE
-set_running_environment=FALSE
-run_model_selection=FALSE
 
-## setup  ----------------------------------------------------------------------------------------------
+# setup  ----------------------------------------------------------------------------------------------
+run_p = FALSE
+run_s=FALSE
+run_e=FALSE
+run_ms=FALSE
+
 dir.create("publish_figures")
 dir.create("processed_data")
+
+source("publish_scripts/functions.R")
 
 library(ggplot2)
 theme_set(theme_bw())
 
 
 
+# Process WCVP taxonomic reference data  -----------------------------------------------------------
+# clear workspace, keep functions and settings
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 
-
-rm(list=ls())
-# Get WCVP data for taxonomic reference ##########################################################
 library(data.table)
 wcp <- fread("data/wcs_jun_20/world_checklist_names_and_distribution_jun_2020/checklist_names.txt", quote="")
 saveRDS(wcp, "processed_data/wcp_jun_20.rds")
 
 
 
-# APG family lookup ###############################################################################
-## set name for database to process
-## reads files bryophyta.csv and apgweb_parsed.csv
+# APG family lookup ------------------------------------------------------------------------------
 db <- "WCP" 
 data_folder_path <- "./processed_data/"
 WCP_input_filename <- "wcp_jun_20.rds"
@@ -48,22 +49,24 @@ source("publish_scripts/APG_family_lookup.R")
 
 
 
-# Clean WCP #######################################################################################
+# Clean WCP --------------------------------------------------------------------------------------
 wcp <- readRDS("processed_data/apg_wcp_jun_20.rds")
 source("publish_scripts/WCP_cleanup.R")
 saveRDS(wcp2, "processed_data/apg_wcp_jun_20_clean.rds")
 
 
 
-# PHYLOGENY  ##############################################
+
+
+# PHYLOGENY  #####################################################################################
 
 
 ## 1) match tip labels Smith & Brown phylogeny with WCVP names
 ## 2) add missing species taxonomically
 ## 3) calculate root distances for all tip labels, then average per TDWG level 3 unit
 
-# Get tip label name sources from OTT, match NCBI names, export GBIF names ########################
-rm(list=ls())
+# Get tip label name sources from OTT, match NCBI names, export GBIF names ------------------------
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(ape)
 library(phytools)
 library(tidyverse)
@@ -79,8 +82,8 @@ saveRDS(fin, file="processed_data/fin.rds")
 
 
 
-# Create common format to source into taxonomy matcher ############################################
-rm(list=ls())
+# Create common format to source into taxonomy matcher --------------------------------------------
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(tidyverse)
 # Load Smith & Brown tip labels not covered by NCBI 
 sb <- readRDS("processed_data/SB_tip_labels.rds")
@@ -89,7 +92,7 @@ saveRDS(input, "processed_data/input_tip_labels.rds")
 
 
 
-# Summon the APG lookup script for tip labels #####################################################
+# Summon the APG lookup script for tip labels -----------------------------------------------------
 db <- "GBIF" 
 data_folder_path <- "./processed_data/"
 gbif_input_filename <- "input_tip_labels.rds"
@@ -98,8 +101,8 @@ source("publish_scripts/APG_family_lookup.R")
 
 
 
-# Run taxonomy matcher for GBIF tip labels ########################################################
-rm(list=ls())
+# Run taxonomy matcher for GBIF tip labels --------------------------------------------------------
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(tidyverse)
 library(data.table)
 
@@ -116,8 +119,8 @@ source("publish_scripts/taxonomic_matcher.v.1.4.R")
 # output: fin_species_match_GBIF.rds
 
 
-# Load results and match the rest of tip labels, remove duplicated tip labels #####################
-rm(list=ls())
+# Load results and match remaining tip labels, remove duplicated tip labels ----------------------
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 matches <- readRDS("processed_data/fin_species_match_GBIF.rds")
 fin <- readRDS("processed_data/fin.rds")
 phylo <- read.tree("trees/ALLMB.tre") # phylogeny
@@ -128,8 +131,8 @@ write.tree(clean_tree, "processed_data/allmb_matched_clean.tre")
 
 
 
-# Add missing species taxonomically ###############################################################
-rm(list=ls())
+# Add missing species taxonomically --------------------------------------------------------------
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(ape)
 library(phytools)
 library(tidyverse)
@@ -138,7 +141,7 @@ phylo <- read.tree("processed_data/allmb_matched_clean.tre")
 wcp <- readRDS("processed_data/apg_wcp_jun_20_clean.rds")
 ferns <- as.vector(read.csv("data/fern_list.txt")[,1])
 
-if(set_running_species){
+if(run_s){
   source("publish_scripts/add_species_server_version.R", print.eval=T)
 }else{
   fin_tree <- read.tree("processed_data/allmb_matched_added_species_clean.tre") # phylogeny
@@ -146,17 +149,17 @@ if(set_running_species){
 
 
 
-# Resolve polytomies and get root distance for each tip ###########################################
+# Resolve polytomies and get root distance for each tip ------------------------------------------
 ## we recommend running this in parallel on a machine that can handle at least 16 cores
 ## 16 cores takes about 1h computation time
 
-rm(list=ls())
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(ape)
 library(castor)
 library(phytools)
 library(parallel)
 
-if(set_running_polytomies){
+if(run_p){
   n_cores =16
   reps <- 1000
   source("publish_scripts/resolve_polytomies.R", print.eval = TRUE)
@@ -166,12 +169,12 @@ if(set_running_polytomies){
 
 
 
-# GEOGRAPHY ###############################################
+# GEOGRAPHY #####################################################################################
 
 
 
-# Process geography ###############################################################################
-rm(list=ls())
+# Process geography -------------------------------------------------------------------------------
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(rgdal)
 library(data.table)
 phylo <- read.tree("processed_data/allmb_matched_added_species_clean.tre") 
@@ -183,14 +186,13 @@ saveRDS(comm, file="processed_data/comm_April2021.rds")
 
 
 
-# Mean root distance for each TDGW level 3 unit #########################################
-rm(list=ls())
+# Mean root distance for each TDGW level 3 unit --------------------------------------------------
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(ape)
 library(parallel)
 library(castor)
 library(phytools)
 library(scales)
-source("publish_scripts/functions.R")
 
 res <- readRDS("processed_data/polytomie_RD_results_Apr21.rds")
 phylo <- read.tree("processed_data/allmb_matched_added_species_clean.tre") 
@@ -204,20 +206,14 @@ source("publish_scripts/phylostruct.R", print.eval = TRUE)
 saveRDS(mrd.res, "processed_data/mrd_Apr2021.rds")
 
 
-# compare to old mrd
-# mrd_old <- readRDS("data/mrd_feb2021.rds")
-# plot(MRD[,1], mrd_old[,1])
-# cor(na.omit(MRD[,1]), na.omit(mrd_old[,1]))
-# sort(MRD[,1] - mrd_old[,1])
 
 
 
 
-
-# Environmental variables #####################################################################
+# Environmental variables ##########################################################################
 # running all scripts takes about 6 hours
-if(set_running_environment){
-  rm(list=ls())
+if(run_e){
+  rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
   #library(cruts)
   library(raster)
   library(vegan)
@@ -229,20 +225,20 @@ if(set_running_environment){
   source("publish_scripts/get_climate.R")
   saveRDS(res, "processed_data/climate.rds")
   
-  rm(list=ls())
+  rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
   shape <- readOGR("shapefile/level3_mod.shp")
   soil <- raster("data/soilgrids/soil_raster_layer_000832.tif")
   source("publish_scripts/get_soil.R")
   saveRDS(res, file="processed_data/soil.rds")
   
-  rm(list=ls())
+  rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
   library(spatialEco)
   shape <- readOGR("shapefile/level3_mod.shp")
   elev <- raster("data/worldclim/wc2.1_30s_elev.tif")
   source("publish_scripts/get_topography.R")
   saveRDS(res, file="processed_data/topography.rds")
   
-  rm(list=ls())
+  rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
   library(rgeos)
   shape <- readOGR("shapefile/level3.shp")
   olson <- readOGR("shapefile/olson/wwf_terr_ecos.shp")
@@ -253,8 +249,8 @@ if(set_running_environment){
 
 
 
-# Assemble final data set #########################################################################
-rm(list=ls())
+# Assemble final data set -------------------------------------------------------------------------
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(ggplot2)
 library(tidyverse)
 library(plyr)
@@ -280,18 +276,18 @@ saveRDS(shp, "processed_data/shp_object_fin_analysis.RDS")
 
 
 
-# Data prep and checks ###########################################################################
+# Data prep and checks ---------------------------------------------------------------------------
 # variable importance, correlations, scaling and variable distributions
-rm(list=ls())
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(sf)
 library(caret)
 library(gbm)
 library(ggsci)
-library(cowplot) # for nice grid arrangements
+library(cowplot) # for nice multiplot arrangements
 library(ggcorrplot)
 #library(tidyverse)
 #library(data.table)
-source("scripts/my_corrplot_func.R")
+
 
 shp <- readRDS("processed_data/shp_object_fin_analysis.RDS")
 source("publish_scripts/data_prep_and_checks.R")
@@ -303,10 +299,9 @@ source("publish_scripts/data_prep_and_checks.R")
 
 # STRUCTURAL EQUATION MODELING ##################################################################
 
-# SEM model selection ############################################################################
-# 
-if(run_model_selection){
-  rm(list=ls())
+# SEM model selection ----------------------------------------------------------------------------
+if(run_ms){
+  rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
   library(lavaan)
   library(stringr)
   library(parallel)
@@ -323,16 +318,14 @@ if(run_model_selection){
 }
 
 
-# evaluate SEMs ##################################################################################
+# Evaluate SEMs ---------------------------------------------------------------------------------------
 # get stats from model selection runs and manually adjust models for better fit
-rm(list=ls())
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(lavaan)
 library(stringr)
 library(ggplot2)
 library(tidyverse)
 library(semPlot)
-library(gridExtra)
-source("scripts/clean_semplot_functions.R") # script for modified plotting functions
 
 load("processed_data/mod_selection_Apr2021.RData")
 dat_no.na <- readRDS("processed_data/sem_input_data.rds")
@@ -341,16 +334,18 @@ source("publish_scripts/mod_selection_SEM_analysis.R", print.eval = TRUE)
 save.image("processed_data/all_models.RData")
 save(max.var.mod_mod7, max.var.mod.fit.mod7, file="processed_data/best_model.RData")
 
-# Maps, Figures, Output #########################################################################
+
+
+
+# Anaylsis using final model - Maps, Figures, Output --------------------------------------------------
 ## closer model inspection, local effects, spatial autocorrelation assessment and correction,
 ## latitudinal SR and MRD patterns, robustness
-rm(list=ls())
+rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms"))) 
 library(lavaan)
 library(semPlot)
 library(ggplot2)
 library(tidyr)
 library(Simpsons)
-library(gridExtra)
 library(cowplot)
 library(png)
 library(writexl) # to export model results as table 
@@ -358,16 +353,13 @@ library(rgdal)
 library(ape)
 library(spdep)
 library(tidyr)
-source("publish_scripts/clean_semplot_functions.R") # script for modified plotting functions
-source("scripts/spatial_correction_lavaan-master/predict_lavaan.R")
 
 load("processed_data/best_model.RData")
 shp <- readRDS("processed_data/shp_object_fin_analysis.RDS") # load spatial object
 dat_no.na <- readRDS("processed_data/sem_input_data.rds")
-shape <- readOGR("shapefile/level3.shp")
+#shape <- readOGR("shapefile/level3.shp")
 
 library(ggthemes)
-library(ggpubr)
 library(plyr)
 source("publish_scripts/sem_results_further_analysis.R")
 
