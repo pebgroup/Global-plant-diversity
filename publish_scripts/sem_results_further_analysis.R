@@ -526,7 +526,7 @@ ggsave("publish_figures/map_lat_patterns.png", width=6, height=6)
     scale_x_continuous("mean root distance")+
     geom_smooth(method="lm", col="black")
 )
-grid.arrange(nrow=1, global_scatterplot_red, global_scatterplot_mrd_red, global_scatterplot_MRD_SR_red)
+plot_grid(nrow=1, global_scatterplot_red, global_scatterplot_mrd_red, global_scatterplot_MRD_SR_red)
 
 ## latitudinal stats
 cor.test(abs(shp$lat), shp$sr, method = "p") # pearson correlation = -0.38
