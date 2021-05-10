@@ -137,30 +137,24 @@ simp_sea1<-Simpsons(prs_m, sr_trans, clusterid = mat_breaks, data=dat_no.na, nre
 # signs for simpsons paradox in both when clustering for mat_m
 
 
-p <- arrangeGrob(nrow=1, widths=c(0.75,1),
-ggplot(dat_no.na, aes(x=tra_m, y=sr_trans, col=factor(mat_breaks)))+
-  geom_point()+
-  scale_color_viridis_d(option = "plasma", 'MAT bins')+
-  #scale_color_gradient2('MAT intervals', low = "blue", mid = "yellow", high = "red", midpoint = 5)
-  #scale_color_continuous("MAT intervals")+
-  guides(colour = guide_legend(reverse=T))+
-  geom_smooth(method = "lm", se=F, col="grey")+
-  geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
-  theme(legend.position = "none")+
-  ggtitle("a)")+
-  ylab("species richness")
-,
-ggplot(dat_no.na, aes(x=prs_m, y=sr_trans, col=factor(mat_breaks)))+
-  geom_point()+
-  scale_color_viridis_d(option = "plasma", 'MAT bins')+
-  guides(colour = guide_legend(reverse=T))+
-  geom_smooth(method = "lm", se=F, col="grey")+
-  geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
-  ggtitle("b)")+
-  ylab("species richness")
-)
-plot(p)
-ggsave("simpsons_paradox_SR.png", p, width=7, height=4, units = "in", dpi = 600)
+
+tra_sr <- ggplot(dat_no.na, aes(x=tra_m, y=sr_trans, col=factor(mat_breaks)))+
+    geom_point()+
+    scale_color_viridis_d(option = "plasma", 'MAT bins')+
+    #scale_color_gradient2('MAT intervals', low = "blue", mid = "yellow", high = "red", midpoint = 5)
+    #scale_color_continuous("MAT intervals")+
+    guides(colour = guide_legend(reverse=T))+
+    geom_smooth(method = "lm", se=F, col="grey")+
+    geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
+    theme(legend.position = "none")+
+    ylab("species richness")
+prs_sr <- ggplot(dat_no.na, aes(x=prs_m, y=sr_trans, col=factor(mat_breaks)))+
+    geom_point()+
+    scale_color_viridis_d(option = "plasma", 'MAT bins')+
+    guides(colour = guide_legend(reverse=T))+
+    geom_smooth(method = "lm", se=F, col="grey")+
+    geom_smooth(method = "lm", aes(group=mat_breaks), se=F)+
+    ylab("species richness")
 
 
 ## MRD area
@@ -170,14 +164,24 @@ table(dat_no.na$soil_breaks)
 
 simp_area1 <- Simpsons(area, mrd, clusterid = soil_breaks, data=dat_no.na, nreps=500) 
 
-ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
+area_mrd <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
   geom_point()+
   scale_x_continuous("area", trans="sqrt")+
   scale_color_viridis_d(option = "plasma", 'soil bins')+
   geom_smooth(method = "lm", se=F, col="grey")+
   geom_smooth(method = "lm", aes(group=soil_breaks), se=F)+
   guides(colour = guide_legend(reverse=T))#+
-ggsave("simpsons_paradox_MRD.png", width=4, height=4, units = "in", dpi = 600)
+empty <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
+  geom_blank()+
+  theme_void()
+top_row <- plot_grid(ncol = 2, rel_widths = c(0.8,1),
+          labels = c("a)", "b)"),
+          tra_sr, prs_sr)
+bottom_row <- plot_grid(ncol = 2, rel_widths = c(1, 0.77),
+                        labels = c("c)", ""),
+                        area_mrd, empty)
+plot_grid(top_row, bottom_row, nrow=2)
+ggsave("publish_figures/simpsons_paradox.png", width=7, height=7, units = "in", dpi = 600)
 
 
 
@@ -194,14 +198,14 @@ mat_mean <- tapply(dat_no.na$mat_m, dat_no.na$mat_breaks, mean)
 res$mat <- as.numeric(mat_mean)
 names(res)[2] <- "pvalue"
 ggplot(res, aes(x=mat, y=Estimate))+
-  geom_point(aes(col=pvalue<0.05))+
-  scale_color_manual(values = c("grey", "black"))+
-  scale_y_continuous("regression coefficient")+
+  geom_point(aes(shape=pvalue<0.05, col=Estimate), size=1.7)+
+  #scale_color())+
+  scale_y_continuous("SR~tra coefficient")+
   theme(legend.position = "null", 
         plot.background = element_blank(),
     panel.background = element_blank())+
   geom_hline(yintercept = 0, lty=2)
-ggsave("slope_mat.png",width=2.5, height=2,units="in")
+ggsave("publish_figures/slope_mat.png",width=2.5, height=2,units="in")
 
 # check countries with mat_m >0
 # library(sf)
@@ -217,13 +221,19 @@ shp$Estimate2 <- shp$Estimate
 shp$Estimate2[shp$pvalue>0.05] <- NA
 (my_plot3 <- ggplot(shp) + 
   geom_sf(aes(fill = Estimate2), lwd=0.1) + 
-#scale_fill_viridis_c(option = "viridis", "Regression slope")+ 
- scale_fill_continuous("Regression slope")+
+ scale_fill_continuous("", na.value="grey70")+
   theme_void()+
-theme(legend.position = "bottom"))
-logo_file <- readPNG("slope_mat.png")
+theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
+      legend.background = element_blank(),
+      legend.key = element_blank(),
+      legend.key.width = unit(3, "mm"),
+      legend.key.height = unit(6, "mm"),
+      legend.text = element_blank())
+)
+
+logo_file <- readPNG("publish_figures/slope_mat.png")
 my_plot_4 <- ggdraw() +
-  draw_image(logo_file,  x = -0.35, y = -0.05, scale = .3) +
+  draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
   draw_plot(my_plot3)
 my_plot_4
 ggsave("publish_figures/tra_scale_map.png", dpi=600, width=10, height=7)
@@ -277,24 +287,28 @@ fitted_vals$level3 <- dat_no.na$level3
 shp <- merge(shp, fitted_vals[,c("sr_trans_fitted", "level3")], by.x="LEVEL_3_CO", by.y="level3", all.x=TRUE)
 
 # plot original vs fitted and residuals
-grid.arrange(ncol=2,
-             ggplot(shp, aes(x=sr_trans, y=sr_trans_fitted, col=abs(lat)))+
-               geom_point()+
-               geom_abline(slope=1, intercept=0)
-             ,
-             ggplot(shp, aes(x=sr_trans, y=sr_trans_residuals, col=abs(lat)))+
-               geom_point()+
-               geom_abline(slope=0, intercept=0)
-             ,
-             ggplot(shp, aes(x=abs(lat), y=sr_trans, col=sr_trans_residuals))+
-               geom_point()+
-               geom_smooth(method="lm")
-             ,
-             ggplot(shp, aes(x=abs(lat), y=sr_trans_residuals, col=sr_trans))+
-               geom_point()+
-               geom_smooth(method="lm")
-)
-ggsave("publish_figures/SEM_residuals_SR.png",  width=7, height=7, units = "in", dpi = 600)
+plot_grid(labels = c("a)", "b)", "c)"), ncol = 2,
+          ggplot(shp, aes(x=sr_trans, y=sr_trans_fitted))+
+            geom_point()+
+            xlab("species richness")+
+            ylab("species richness fitted")+
+            geom_abline(slope=1, intercept=0)
+          ,
+          ggplot(shp, aes(x=sr_trans, y=sr_trans_residuals))+
+            geom_point()+
+            xlab("species richness")+
+            ylab("species richness SEM residuals")+
+            geom_abline(slope=0, intercept=0)
+          ,
+          ggplot(shp, aes(x=abs(lat), y=sr_trans_residuals, col=sr_trans))+
+            geom_point()+
+            ylab("species richness SEM residuals")+
+            xlab("absolute latitude")+
+            scale_color_continuous("SR")+
+            geom_smooth(method="lm")
+          )
+ggsave(file="publish_figures/SEM_residuals_SR.png",
+       width=7, height=7, units = "in", dpi = 600)
 
 
 
@@ -344,7 +358,7 @@ ggsave("publish_figures/SAC_sem_residuals.png", width=5, height=, units = "in", 
 
 
 ## Correct estimates for spatial autocorrelation
-source("scripts/spatial_correction_lavaan-master/lavSpatialCorrect.R")
+
 # merge coordinates into original model data
 coo.df <- data.frame(level3=shp$LEVEL_3_CO, x=shp$x, y=shp$y)
 dat_no.na <- merge(dat_no.na, coo.df, all.x=TRUE)
@@ -375,9 +389,9 @@ all <- all[,c("lhs", "rhs", "est.std","se", "pvalue",
 
 
 
-# MAPS and other figures ################################################################################3
+# Maps and  figures ################################################################################
 
-# All in one map SR 
+# Global SR map ------------------------------------------------------------------------------------
 
 ## get small countries that need a buffer / thicker lines
 thicc_lines <-shp[which(shp$area<1200000000),]
@@ -416,23 +430,21 @@ ucol <- max(thicc_lines$sr)/max(shp$sr)
            panel.grid.minor = element_blank(),
            plot.margin = margin(0, 0, 0, 0.2, "cm"))
 )
-ggarrange(sr_map2, sr_ldg_map, 
-          #labels = c("A", "B"),
+plot_grid(sr_map2, sr_ldg_map, 
           ncol = 2, nrow = 1, 
-          widths = c(4,1))
+          rel_widths = c(4,1), rel_heights = c(1,1))
 ggsave("publish_figures/sr_map_AIO.png", dpi=600, width=10, height=3.7)
 
-
-# All in one map MRD ####
+# Global MRD map ------------------------------------------------------------------------------------
 
 lcol.mrd <- (min(thicc_lines$mrd)-min(shp$mrd))/(max(shp$mrd)-min(shp$mrd))
 ucol.mrd <- (max(thicc_lines$mrd)-min(shp$mrd))/(max(shp$mrd)-min(shp$mrd))
 mrd_map2 <- ggplot(shp) + 
   geom_sf(aes(fill = mrd), lwd=0.1) + 
   geom_sf(data=thicc_lines, lwd=1.5, aes(col=mrd), show.legend=F)+
-  scale_colour_viridis_c("SR", option = "plasma", 
+  scale_colour_viridis_c(option = "plasma", 
                          begin = lcol.mrd, end = ucol.mrd)+
-  scale_fill_viridis_c(option = "plasma")+ #, 
+  scale_fill_viridis_c("MRD", option = "plasma")+ #, 
   theme(legend.position = c(0.21, 0.3),
         legend.background = element_blank(),
         legend.key = element_blank(),
@@ -456,18 +468,17 @@ mrd_map2 <- ggplot(shp) +
            panel.grid.minor = element_blank(),
            plot.margin = margin(0, 0, 0, 0.2, "cm"))
 )
-ggarrange(mrd_map2, mrd_ldg_map, 
-          #labels = c("A", "B"),
+plot_grid(mrd_map2, mrd_ldg_map, 
           ncol = 2, nrow = 1, 
-          widths = c(4,1))
+          rel_widths = c(4,1))
 ggsave("publish_figures/mrd_map_AIO.png", dpi=600, width=10, height=3.7)
 
 
 
-# Latitudinal patterns SR + MRD  ###########
+# Latitudinal patterns SR + MRD  -------------------------------------------------------------------
 
 shpbins <- shp
-range01 <- function(x){(x-min(x, na.rm = TRUE))/(max(x, na.rm = TRUE)-min(x, na.rm = TRUE))}
+# scale data to values between 0 and 1 for comparison
 shpbins$sr_scaled <- range01(shpbins$sr)
 shpbins$mrd_scaled <- range01(shpbins$mrd)
 
@@ -530,7 +541,7 @@ summary(lm(mrd~lat, data=shp[shp$lat>0,]))
 summary(lm(mrd~abs(lat), data=shp))
 
 
-# Lat patterns robustness #####
+# Lat patterns robustness --------------------------------------------------------------------------------
 ## bootstrap for different sample size differs between hemispheres 
 table(shp$lat<0) 
 reps <- 500
