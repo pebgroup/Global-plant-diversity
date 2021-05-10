@@ -124,15 +124,6 @@ fit2$var.n <- fit2$gm.sr.n+fit2$gm.mrd.n
 #   geom_boxplot()
 # 
 # 
-# # AIC CFI correlations
-# grid.arrange(ncol=2,
-#              ggplot(fit2[fit2$aic<2800,], aes(cfi.robust, aic, col=var.n)) +
-#                geom_point(alpha=0.1),
-#              ggplot(fit2[fit2$aic<2800,], aes(rmsea.robust, aic, col=var.n)) +
-#                geom_point(alpha=0.1)
-# )
-# 
-# 
 
 
 
