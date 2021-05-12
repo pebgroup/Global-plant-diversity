@@ -13,7 +13,7 @@ See header in this script for system requirements and execution time information
 Data contains primary and processed files that are produced along the way and sourced in later to shorten runtimes. All primary and processed files are provided. All files are listed with description here: [file_description.txt](file_description.txt).
 
 
-## Analysis schematic workflow
+## Analysis workflow
 <p align="left">
-<img src="publish_figures/flow_chart_wcvp.png"/>  
+<img src="flow_chart_wcvp.png"/>  
 </p>  
