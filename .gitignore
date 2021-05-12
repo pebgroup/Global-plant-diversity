@@ -7,10 +7,10 @@
 *.Ruserdata
 *.zip
 *.tar.gz
-*.txt
+#*.txt
 *.odt
 *.tre
-*.png
+#*.png
 *.docx
 *.pdf
 *.RDataTmp
