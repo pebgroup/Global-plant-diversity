@@ -1,18 +1,9 @@
 # builds a common format based on the Smith & Brown ALLMB tree tip labels from GBIF to feed into the taxonomy matcher
-rm(list=ls())
-library(tidyverse)
 
-
-# Load Smith & Brown tip labels not covered by NCBI 
-sb <- readRDS("data/SB_tip_labels.rds")
 
 
 
 # GBIF ##################################################################################
-# download runs via server:
-# gbif_server.rds
-
-gbif <- readRDS("data/gbif_all.rds")
 
 # transform list to dataframe
 ## removing lines that do not include all required columns
@@ -166,5 +157,5 @@ for(i in 1:length(ind)){
 input <- input[-which(input$usable=="no"),]
 
   
-saveRDS(input, "data/input_tip_labels.rds")
+
 
