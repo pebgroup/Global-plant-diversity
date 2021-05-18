@@ -1,7 +1,7 @@
 
-### 15 HOURS ON SERVER ####################################################
+### APPROX 7 HOURS  ####################################################
+# this code cannot be parallelized as the tree changes with each iteration :(
 
-rm(list=ls())
 bind.tip2 <- function (tree, tip.label, edge.length = NULL, where = NULL, 
                        position = 0, interactive = FALSE, ...) 
 {
@@ -68,27 +68,21 @@ bind.tip2 <- function (tree, tip.label, edge.length = NULL, where = NULL,
 }
       
 
-library(ape)
-library(phytools)
-library(tidyverse)
-
-phylo <- read.tree("trees/allmb_matched_no_multi.tre")
-wcsp <- readRDS("data/apg_wcp_jun_20_clean.rds")
-wcsp <- wcsp %>% select(-family) %>%
+wcp <- wcp %>% select(-family) %>%
   rename("family" = "family.apg")
 
 # remove ferns + moss
-ferns <- as.vector(read.csv("fern_list.txt")[,1])
-wcsp <- wcsp[!wcsp$family %in% ferns,]
-wcsp <- wcsp[!wcsp$family %in% "Isoetaceae",] # special character thing
+wcp <- wcp[!wcp$family %in% ferns,]
+wcp <- wcp[!wcp$family %in% "Isoetaceae",] # special character thing
 
 
 # get list of all accepted species
-goodspp <- wcsp[wcsp$genus_hybrid == "" &
-                  wcsp$species_hybrid == "" &
-                  wcsp$infraspecific_rank == "" &
-                  wcsp$species != "" &
-                  wcsp$taxon_status == "Accepted",]
+goodspp <- wcp[wcp$genus_hybrid == "" &
+                  wcp$species_hybrid == "" &
+                  wcp$infraspecific_rank == "" &
+                  wcp$species != "" &
+                  wcp$taxon_status == "Accepted",]
+saveRDS(goodspp, "processed_data/goodspp.rds")
 
 # get list of good species that are not in matching
 toadd <- goodspp[!goodspp$plant_name_id %in% phylo$tip.label,]
@@ -121,7 +115,7 @@ nrow(toadd[toadd$family %in% lefties,])
 
 
 # reduce toadd for testing purposes
-#toadd <- toadd[sample(c(1:nrow(toadd)), 500, replace=FALSE),]
+#toadd <- toadd[sample(c(1:nrow(toadd)), 100, replace=FALSE),]
 
 # initialize vector to record which method to use to find MRCA (genus = 1, family = 2, or order = 3)
 method <- vector("numeric", nrow(toadd))
@@ -186,5 +180,32 @@ for(i in 1:nrow(toadd)){
   if(i %% ceiling(nrow(toadd)/100) == 0) print(paste(i/ceiling(nrow(toadd)/100), "% complete", Sys.time()))
 }
 
-saveRDS(taxa_not_added, "taxa_not_added_2.rds")
-write.tree(phylo, "allmb_matched_added_species_Nov20.tre")
+saveRDS(taxa_not_added, "processed_data/taxa_not_added.rds")
+write.tree(phylo, "processed_data/allmb_matched_added_species_Apr21.tre")
+
+
+
+
+# test results from adding species ############################################
+er <- readRDS("processed_data/taxa_not_added.rds")
+goodspp <- readRDS("processed_data/goodspp.rds")
+fin_tree <- read.tree("processed_data/allmb_matched_added_species_Apr21.tre")
+
+length(fin_tree$tip.label) # species in the tree
+er # species not added to the tree
+wcp[wcp$plant_name_id %in% er,]
+# One monotypic family, one monogeneric family
+
+# species that could not be added
+toadd <- goodspp[!goodspp$plant_name_id %in% phylo$tip.label,]
+table(toadd$plant_name_id %in% fin_tree$tip.label)
+table(unique(goodspp$plant_name_id) %in% fin_tree$tip.label) # wcvp species not in the tree
+
+table(fin_tree$tip.label %in% wcp$accepted_plant_name_id) # tip labels not listed as accepted
+not_listed <- fin_tree$tip.label[!fin_tree$tip.label %in% wcp$accepted_plant_name_id]
+wcp[wcp$plant_name_id %in% not_listed,]
+tree_mod <- drop.tip(fin_tree, not_listed)
+
+table(tree_mod$tip.label %in% wcp$accepted_plant_name_id) # tip labels not listed as accepted
+write.tree(tree_mod, "processed_data/allmb_matched_added_species_clean.tre")
+
