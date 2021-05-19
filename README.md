@@ -13,8 +13,6 @@ Using the World Checklist of Vascular Plants (WCVP, [1]) taxonomy and distributi
 
 All scripts are stored in *publish_scripts* folder. To go through the analysis step by step, open *master_analysis.R*, which sources all other scripts required to repeat analysis. The header in the master script contains system requirements and execution time information.
 
-Script included with brief description
-
 Script                          | Job
 --------------------------------|--------------------------------------------------------------------------
 add_species_server_version.R    | Adding species taxonomically to a phylogeny
