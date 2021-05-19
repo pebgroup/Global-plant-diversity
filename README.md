@@ -44,7 +44,7 @@ Please note that for the sake of reproducibility, we include *all* scripts. That
 
 
 ## Data
-Primary data are files obtained online / by collaborators. Processed data are files which are produced during the analysis steps and stored to shorten execution time for later analysis steps and to keep work space small. Files are listed with description here: [data description](data_description.md).
+Primary data are files obtained online / by collaborators. Processed data are files which are produced during the analysis steps and stored to shorten execution time for later analysis steps and to keep work space small.
 
 Large data files that can be freely accessed online (i.e. CRU TS, WordClim) are not part of the supplement but listed with version number and information how to obtain them.
 
