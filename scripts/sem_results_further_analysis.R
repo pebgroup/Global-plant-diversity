@@ -106,7 +106,7 @@ ggplot(plot_sr, aes(x=value, y=sr_trans))+
   geom_smooth(method="lm", se=F)+
   geom_abline(aes(slope=std.all, intercept=0), col="grey20")+
   theme(strip.background = element_blank())
-ggsave("publish_figures/scatterplot_sig_effects_SR.png",  width=7, height=7, units = "in", dpi = 600)
+ggsave("figures/scatterplot_sig_effects_SR.png",  width=7, height=7, units = "in", dpi = 600)
 
 sig.mrd <- pres3[pres3$lhs %in% c("mrd"),]
 plot_mrd <- dat_no.na[,c("mrd", sig.mrd$rhs)]
@@ -120,7 +120,7 @@ ggplot(plot_mrd, aes(x=value, y=mrd))+
   geom_smooth(method="lm", se=F)+
   geom_abline(aes(slope=std.all, intercept=0), col="grey20")+
   theme(strip.background = element_blank())
-ggsave("publish_figures/scatterplot_sig_effects_MRD.png",  width=5, height=5, units = "in", dpi = 600)
+ggsave("figures/scatterplot_sig_effects_MRD.png",  width=5, height=5, units = "in", dpi = 600)
 
 
 # --> Might be pointing at a Simpsons paradox?
@@ -181,7 +181,7 @@ bottom_row <- plot_grid(ncol = 2, rel_widths = c(1, 0.77),
                         labels = c("c)", ""),
                         area_mrd, empty)
 plot_grid(top_row, bottom_row, nrow=2)
-ggsave("publish_figures/simpsons_paradox.png", width=7, height=7, units = "in", dpi = 600)
+ggsave("figures/simpsons_paradox.png", width=7, height=7, units = "in", dpi = 600)
 
 
 
@@ -205,7 +205,7 @@ ggplot(res, aes(x=mat, y=Estimate))+
         plot.background = element_blank(),
     panel.background = element_blank())+
   geom_hline(yintercept = 0, lty=2)
-ggsave("publish_figures/slope_mat.png",width=2.5, height=2,units="in")
+ggsave("figures/slope_mat.png",width=2.5, height=2,units="in")
 
 # check countries with mat_m >0
 # library(sf)
@@ -231,12 +231,12 @@ theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
       legend.text = element_blank())
 )
 
-logo_file <- readPNG("publish_figures/slope_mat.png")
+logo_file <- readPNG("figures/slope_mat.png")
 my_plot_4 <- ggdraw() +
   draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
   draw_plot(my_plot3)
 my_plot_4
-ggsave("publish_figures/tra_scale_map.png", dpi=600, width=10, height=7)
+ggsave("figures/tra_scale_map.png", dpi=600, width=10, height=7)
 
 
 #save.image("processed_data/results.RData")
@@ -307,7 +307,7 @@ plot_grid(labels = c("a)", "b)", "c)"), ncol = 2,
             scale_color_continuous("SR")+
             geom_smooth(method="lm")
           )
-ggsave(file="publish_figures/SEM_residuals_SR.png",
+ggsave(file="figures/SEM_residuals_SR.png",
        width=7, height=7, units = "in", dpi = 600)
 
 
@@ -354,7 +354,7 @@ ggplot(temp, aes(x=dist.class, y=value, col=name)) +
   scale_x_continuous("Distance class (km)")+
   scale_color_discrete("SEM residuals", labels=c("mrd", "sr"))+
   ylab("Moran's I")
-ggsave("publish_figures/SAC_sem_residuals.png", width=5, height=, units = "in", dpi = 600)
+ggsave("figures/SAC_sem_residuals.png", width=5, height=, units = "in", dpi = 600)
 
 
 ## Correct estimates for spatial autocorrelation
@@ -398,6 +398,7 @@ thicc_lines <-shp[which(shp$area<1200000000),]
 lcol <- min(thicc_lines$sr)/max(shp$sr)
 ucol <- max(thicc_lines$sr)/max(shp$sr)
 
+
 (sr_map2 <- ggplot(shp) + 
     geom_sf(aes(fill=sr),lwd=0.1) + 
     geom_sf(data=thicc_lines, lwd=1.5, aes(col=sr), show.legend=F)+
@@ -409,31 +410,36 @@ ucol <- max(thicc_lines$sr)/max(shp$sr)
           legend.key = element_blank(),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          plot.margin = margin(0, 0, 0, 0, "cm")
+          plot.margin = margin(0, 0, 0, 0, "cm"),
+          panel.border = element_blank()
     )+
-    coord_sf(xlim = c(-180, 180), ylim = c(-70, 85), expand = F)+
+    coord_sf(xlim = c(-180, 180), ylim = c(-70, 85), expand = F, 
+             label_axes = "-NE-")+
     xlab(" ")
 )
-(sr_ldg_map <- ggplot(shp, aes(lat,sr))+
+(sr_ldg_map <- ggplot(shp, aes(lat,sr,col=sr))+
     geom_point(alpha=0.5)+
+    scale_color_viridis_c("SR", option = "plasma", trans = "sqrt")+
     scale_y_continuous("SR/1000", trans = "sqrt", 
                        labels = c("0", "5", "10", "15", "20"),
                        breaks = c(0, 5000, 10000, 15000, 20000))+
-    scale_x_continuous("", labels = c("60°S","40°S","20°S", "0°", "20°N","40°N","60°N", "80°N"),
+    scale_x_continuous("", labels = c("","","", "", "","","", ""), #c("60°S","40°S","20°S", "0°", "20°N","40°N","60°N", "80°N")
                        breaks = c(-60,-40, -20, 0, 20,40,60, 80), 
-                       position="top")+
-    geom_smooth(se=T)+
+                       position="bottom")+
+    geom_smooth(col="grey40", lwd=0.5)+
     #geom_smooth(data=shp[shp$lat<0,], method="lm", col="black")+
     #geom_smooth(data=shp[shp$lat>0,], method="lm", col="black")+
-    coord_flip(xlim =c(-70, 85), ylim =c(0, max(shp$sr)+500),expand = F)+
+    coord_flip(xlim =c(-70, 85), ylim =c(0, max(shp$sr)+1500),expand = F)+
     theme( panel.grid.major = element_blank(),
            panel.grid.minor = element_blank(),
-           plot.margin = margin(0, 0, 0, 0.2, "cm"))
+           plot.margin = margin(0, 0, 0, -0.50, "cm"),
+           legend.position = "none", 
+           panel.border = element_blank())
 )
 plot_grid(sr_map2, sr_ldg_map, 
           ncol = 2, nrow = 1, 
-          rel_widths = c(4,1), rel_heights = c(1,1))
-ggsave("publish_figures/sr_map_AIO.png", dpi=600, width=10, height=3.7)
+          rel_widths = c(4,1), rel_heights = c(1,1), labels = c("a)", ""))
+ggsave("figures/sr_map_AIO.png", dpi=600, width=10, height=3.7)
 
 # Global MRD map ------------------------------------------------------------------------------------
 
@@ -450,28 +456,33 @@ mrd_map2 <- ggplot(shp) +
         legend.key = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        plot.margin = margin(0, 0, 0, 0, "cm")
+        plot.margin = margin(0, 0, 0, 0, "cm"),
+        panel.border = element_blank()
   )+
-  coord_sf(xlim = c(-180, 180), ylim = c(-70, 85), expand = F)+
+  coord_sf(xlim = c(-180, 180), ylim = c(-70, 85), expand = F, 
+           label_axes = "-NE-")+
   xlab(" ")
-(mrd_ldg_map <- ggplot(shp, aes(lat,mrd))+
+(mrd_ldg_map <- ggplot(shp, aes(lat,mrd,col=mrd))+
     geom_point(alpha=0.5)+
+    scale_color_viridis_c("MRD", option = "plasma")+ 
     scale_y_continuous("MRD")+
-    scale_x_continuous("", labels = c("60°S","40°S","20°S", "0°", "20°N","40°N","60°N", "80°N"),
+    scale_x_continuous("", labels = c("","","", "", "","","", ""),
                        breaks = c(-60,-40, -20, 0, 20,40,60, 80), 
-                       position="top")+
-    geom_smooth(se=T)+
+                       position="bottom")+
+    geom_smooth(col="grey40", lwd=0.5)+
     #geom_smooth(data=shp[shp$lat<0,], method="lm", col="black")+
     #geom_smooth(data=shp[shp$lat>0,], method="lm", col="black")+
     coord_flip(xlim =c(-70, 85),ylim =c(min(shp$mrd)-1, max(shp$mrd)+1),expand = F)+
     theme( panel.grid.major = element_blank(),
            panel.grid.minor = element_blank(),
-           plot.margin = margin(0, 0, 0, 0.2, "cm"))
+           plot.margin = margin(0, 0, 0, -0.50, "cm"),
+           legend.position = "none",
+           panel.border = element_blank())
 )
 plot_grid(mrd_map2, mrd_ldg_map, 
           ncol = 2, nrow = 1, 
-          rel_widths = c(4,1))
-ggsave("publish_figures/mrd_map_AIO.png", dpi=600, width=10, height=3.7)
+          rel_widths = c(4,1), labels = c("b)", ""))
+ggsave("figures/mrd_map_AIO.png", dpi=600, width=10, height=3.7)
 
 
 
@@ -503,7 +514,7 @@ temp$g3 <- factor(temp$g3, levels = c("Americas","Afrope","Australasia"))
     theme(strip.background = element_blank(),
           strip.text.x = element_text(size = 8))
 )
-ggsave("publish_figures/map_lat_patterns.png", width=6, height=6)
+ggsave("figures/map_lat_patterns.png", width=6, height=6)
 
 ## alternative latitude pattern plot
 (global_scatterplot_red <- ggplot(shp, aes(lat, sr))+
@@ -592,7 +603,7 @@ ggplot(pres3, aes(cor, fill=sig))+
   theme(strip.background = element_blank(),
         strip.text.x = element_text(size = 8))+
   scale_fill_startrek(name="p-value<0.05")
-ggsave("publish_figures/lat_patterns_robustness.png", width=6, height=4.5)
+ggsave("figures/lat_patterns_robustness.png", width=6, height=4.5)
 
 
 
