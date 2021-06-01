@@ -472,7 +472,7 @@ mrd_map2 <- ggplot(shp) +
     geom_smooth(col="grey40", lwd=0.5)+
     #geom_smooth(data=shp[shp$lat<0,], method="lm", col="black")+
     #geom_smooth(data=shp[shp$lat>0,], method="lm", col="black")+
-    coord_flip(xlim =c(-70, 85),ylim =c(min(shp$mrd)-1, max(shp$mrd)+1),expand = F)+
+    coord_flip(xlim =c(-70, 85),ylim =c(min(shp$mrd)-1, max(shp$mrd)+2),expand = F)+
     theme( panel.grid.major = element_blank(),
            panel.grid.minor = element_blank(),
            plot.margin = margin(0, 0, 0, -0.50, "cm"),
@@ -502,42 +502,105 @@ temp$g3[grep("AMERICA", temp$CONTINENT)] <- "Americas"
 temp$g3[grep("ASIA", temp$CONTINENT)] <- "Australasia"
 temp$g3[grep("AFRICA|EUROPE", temp$CONTINENT)] <- "Afrope"
 temp$g3 <- factor(temp$g3, levels = c("Americas","Afrope","Australasia"))
+
 (continent_scatterplot_comb <- ggplot(na.omit(temp), aes(lat, value, col=name))+
     geom_point(alpha=0.5)+
-    scale_y_continuous("scaled MRD and SR")+#,
+    scale_y_continuous("scaled MRD and SR", labels =c("0", "0.25", "0.50", "0.75", "1"))+#,
     scale_x_continuous("latitude")+
-    facet_wrap(~g3, ncol = 3)+ #, scale="free"
+    facet_wrap(~g3, ncol = 3, labeller=
+                 labeller(g3 = c(Americas = "Northern & Southern America",
+                                 Afrope = "Africa & Europe",
+                                 Australasia="Australasia, Asia-Temperate & -Tropical")))+
     geom_smooth(method="loess", se=T)+
     coord_flip(ylim = c(0,1))+
     scale_colour_startrek(labels=c("MRD", "SR"), name="")+
     #theme_void()+
     theme(strip.background = element_blank(),
-          strip.text.x = element_text(size = 8))
+          strip.text.x = element_text(size = 8),
+          panel.border = element_blank(),
+          panel.grid = element_blank(),
+          axis.line.x = element_line(colour = "grey40"),
+          axis.ticks = element_line(colour = "grey40"))+
+    guides(color=guide_legend(override.aes=list(fill=NA))) # override geom_smooth() default legend key grey background
 )
-ggsave("figures/map_lat_patterns.png", width=6, height=6)
+ggsave("figures/map_lat_patterns.pdf", width=7.6, height=4)
+ggsave("figures/map_lat_patterns.png", width=7.6, height=4)
+
+(continent_scatterplot_comb <- ggplot(na.omit(temp), aes(lat, value, col=name))+
+    geom_point(alpha=0.5)+
+    scale_y_continuous("scaled MRD and SR", labels =c("0", "0.25", "0.50", "0.75", "1"))+#,
+    scale_x_continuous("latitude")+
+    facet_wrap(~g3, ncol = 3, labeller=
+                 labeller(g3 = c(Americas = "Northern & Southern America",
+                                 Afrope = "Africa & Europe",
+                                 Australasia="Australasia, Asia-Temperate & -Tropical")))+
+    geom_smooth(method="loess", se=F)+
+    coord_flip(ylim = c(0,1))+
+    scale_colour_startrek(labels=c("MRD", "SR"), name="")+
+    #theme_void()+
+    theme(strip.background = element_blank(),
+          strip.text.x = element_text(size = 8),
+          panel.border = element_blank(),
+          panel.grid = element_blank(),
+          axis.line.x = element_line(colour = "grey40"),
+          axis.ticks = element_line(colour = "grey40"),
+          panel.background = element_rect(fill = "transparent"),
+          plot.background = element_rect(fill = "transparent", color = NA))+
+    guides(color=guide_legend(override.aes=list(fill=NA))) # override geom_smooth() default legend key grey background
+)
+ggsave("figures/map_lat_patterns_alt.pdf", width=7.6, height=4, bg = "transparent")
+ggsave("figures/map_lat_patterns_alt.png", width=7.6, height=4, bg = "transparent")
+
+
+# save region maps
+# shp_2 = st_shift_longitude(shp)
+# ggplot(shp_2[shp_2$CONTINENT %in% c("NORTHERN AMERICA", "SOUTHERN AMERICA"),]) + 
+#   geom_sf(lwd=0, fill = "grey30")+
+#   theme(panel.grid = element_blank())
+# ggsave("figures/americas.png", width=2, height=1.8, units = "in", dpi = 600)
+# 
+# ggplot(shp[shp$CONTINENT %in% c("AFRICA", "EUROPE"),]) + 
+#   geom_sf(lwd=0, fill = "grey30")+
+#   theme(panel.grid = element_blank())
+# ggsave("figures/afrope.png", width=1.6, height=2, units = "in", dpi = 600)
+# 
+ggplot(shp_2[shp_2$CONTINENT %in% c("ASIA-TEMPERATE", "ASIA-TROPICAL", "AUSTRALASIA"),]) +
+  geom_sf(lwd=0, fill = "grey30")+
+  theme(panel.grid = element_blank())
+ggsave("figures/asia.png", width=2, height=2, units = "in", dpi = 600)
+
+ggplot(shp) + 
+  geom_sf(lwd=0, fill = "grey50")+
+  coord_sf(expand = FALSE)+
+  theme(panel.grid = element_blank(),
+        panel.border = element_blank())+
+  geom_sf(data=shp_2[shp_2$CONTINENT %in% c("ASIA-TEMPERATE", "ASIA-TROPICAL", "AUSTRALASIA"),], lwd=0, fill = "grey90")+
+  theme(panel.grid = element_blank())
+ggsave("figures/world.png", width=5, height=3, units = "in", dpi = 600)
+
 
 ## alternative latitude pattern plot
-(global_scatterplot_red <- ggplot(shp, aes(lat, sr))+
-    geom_point(alpha=0.5)+
-    scale_y_continuous("species richness", trans = "sqrt")+
-    scale_x_continuous("latitude centroid botanical country")+
-    geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
-    geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
-)
-(global_scatterplot_mrd_red <- ggplot(shp, aes(lat, mrd))+
-    geom_point(alpha=0.5)+
-    scale_y_continuous("mean root distance")+
-    scale_x_continuous("latitude centroid botanical country")+    
-    geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
-    geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
-)
-(global_scatterplot_MRD_SR_red <- ggplot(shp, aes(mrd, sr))+
-    geom_point(alpha=0.5)+
-    scale_y_continuous("species richness", trans = "sqrt")+
-    scale_x_continuous("mean root distance")+
-    geom_smooth(method="lm", col="black")
-)
-plot_grid(nrow=1, global_scatterplot_red, global_scatterplot_mrd_red, global_scatterplot_MRD_SR_red)
+# (global_scatterplot_red <- ggplot(shp, aes(lat, sr))+
+#     geom_point(alpha=0.5)+
+#     scale_y_continuous("species richness", trans = "sqrt")+
+#     scale_x_continuous("latitude centroid botanical country")+
+#     geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+#     geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
+# )
+# (global_scatterplot_mrd_red <- ggplot(shp, aes(lat, mrd))+
+#     geom_point(alpha=0.5)+
+#     scale_y_continuous("mean root distance")+
+#     scale_x_continuous("latitude centroid botanical country")+    
+#     geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
+#     geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
+# )
+# (global_scatterplot_MRD_SR_red <- ggplot(shp, aes(mrd, sr))+
+#     geom_point(alpha=0.5)+
+#     scale_y_continuous("species richness", trans = "sqrt")+
+#     scale_x_continuous("mean root distance")+
+#     geom_smooth(method="lm", col="black")
+# )
+# plot_grid(nrow=1, global_scatterplot_red, global_scatterplot_mrd_red, global_scatterplot_MRD_SR_red)
 
 ## latitudinal stats
 cor.test(abs(shp$lat), shp$sr, method = "p") # pearson correlation = -0.38
