@@ -576,7 +576,7 @@ ggplot(shp) +
         panel.border = element_blank())+
   geom_sf(data=shp_2[shp_2$CONTINENT %in% c("ASIA-TEMPERATE", "ASIA-TROPICAL", "AUSTRALASIA"),], lwd=0, fill = "grey90")+
   theme(panel.grid = element_blank())
-ggsave("figures/world.png", width=5, height=3, units = "in", dpi = 600)
+ggsave("figures/world2.png", width=5, height=3, units = "in", dpi = 600)
 
 
 ## alternative latitude pattern plot
