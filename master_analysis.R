@@ -343,7 +343,7 @@ rm(list = setdiff(ls(), c(lsf.str(), "run_p", "run_s", "run_e", "run_ms")))
 load("processed_data/best_model.RData")
 shp <- readRDS("processed_data/shp_object_fin_analysis.RDS") # load spatial object
 dat_no.na <- readRDS("processed_data/sem_input_data.rds")
-#shape <- readOGR("shapefile_bot_countries/level3.shp")
+#shape <- readOGR("data/shapefile_bot_countries/level3.shp")
 
 source("scripts/sem_results_further_analysis.R")
 
