@@ -7,12 +7,13 @@ cat(max.var.mod_mod7)
 
 fm <- "
 sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + m*mat_m + prs_m + tr0*tri
-mrd ~ pre_m + sub_trop_mbf + prs_m + tra_m + s1*soil + tri + mat_m + a3*area 
+mrd ~ p2*pre_m + trf2*sub_trop_mbf + prs_m + tra_m + s1*soil + tri + mat_m + a3*area 
 soil ~ a1*area + ms1*mont_gs + trf1*sub_trop_mbf
 sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area + tr1*tri
 
 # indirect paths on SR
 sr_area_via_trf := a1*s + a2*trf
+sr_area_via_soil := a1*s
 sr_area_total := a + a1*s + a2*trf
 
 sr_subtrop_mbf_via_soil := trf1*trf
@@ -29,6 +30,8 @@ sr_mat_m_total :=  m1*trf + m
 # indirect paths on MRD
 mrd_area_via_soil := a1*s1
 mrd_area_total := a1*s1 + a3
+mrd_pre_via_trf := p1*trf2
+mrd_pre_total := p1*trf2 + p2
 "
 
 
@@ -187,18 +190,19 @@ ggsave("figures/simpsons_paradox.png", width=7, height=7, units = "in", dpi = 60
 
 
 
-## Global patterns for tra_m map
+## Global patterns for temperature range influence on SR
 ### get slopes and p-values for each mat bin
 (res <- t(sapply(split(dat_no.na, list(dat_no.na$mat_breaks)),
          function(subd){summary(lm(sr_trans ~ tra_m, data = subd))$coefficients[2,c(1,4)]}))) 
 res <- as.data.frame(res)
+names(res) <- c("tra_coef", "tra_pvalue")
 
 # get mean mat_m per group
 mat_mean <- tapply(dat_no.na$mat_m, dat_no.na$mat_breaks, mean)
-res$mat <- as.numeric(mat_mean)
-names(res)[2] <- "pvalue"
-ggplot(res, aes(x=mat, y=Estimate))+
-  geom_point(aes(shape=pvalue<0.05, col=Estimate), size=1.7)+
+res$mat_bin_means <- as.numeric(mat_mean)
+
+ggplot(res, aes(x=mat_bin_means, y=tra_coef))+
+  geom_point(aes(shape=tra_pvalue<0.05, col=tra_coef), size=1.7)+
   #scale_color())+
   scale_y_continuous("SR~tra coefficient")+
   theme(legend.position = "null", 
@@ -207,20 +211,22 @@ ggplot(res, aes(x=mat, y=Estimate))+
   geom_hline(yintercept = 0, lty=2)
 ggsave("figures/slope_mat.png",width=2.5, height=2,units="in")
 
-# check countries with mat_m >0
-# library(sf)
-# shp <- st_as_sf(shape)
-shp$tra_dynamics <- "positive"
-shp$tra_dynamics[shp$LEVEL_3_CO %in% dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
+# visualize as map
+simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
+simpsons_map$tra_dynamics <- "positive"
+simpsons_map$tra_dynamics[simpsons_map$LEVEL_3_CO %in% 
+                            dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
 # add slopes for all bins
 res$mat_breaks <- c(1:10)
-dat_no.na <- merge(dat_no.na, res, all.x=TRUE)
-shp <- merge(shp, dat_no.na[,c("level3","Estimate", "pvalue", "mat_m")], by.x="LEVEL_3_CO", by.y="level3", all.x=TRUE)
+# merge level 3 in via mat_bin_means
+temp <- merge(dat_no.na[, c("mat_breaks", "level3")], res, all.x=TRUE)
+simpsons_map <- merge(simpsons_map, temp,
+                      by.x="LEVEL_3_CO", by.y="level3", all.x=TRUE)
 
-shp$Estimate2 <- shp$Estimate
-shp$Estimate2[shp$pvalue>0.05] <- NA
-(my_plot3 <- ggplot(shp) + 
-  geom_sf(aes(fill = Estimate2), lwd=0.1) + 
+simpsons_map$tra_coef2 <- simpsons_map$tra_coef
+simpsons_map$tra_coef2[simpsons_map$tra_pvalue>0.05] <- NA
+(my_plot3 <- ggplot(simpsons_map) + 
+  geom_sf(aes(fill = tra_coef2), lwd=0.1) + 
  scale_fill_continuous("", na.value="grey70")+
   theme_void()+
 theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
@@ -238,6 +244,119 @@ my_plot_4 <- ggdraw() +
 my_plot_4
 ggsave("figures/tra_scale_map.png", dpi=600, width=10, height=7)
 
+
+## Global patterns for precipitation seasonality influence on SR
+### get slopes and p-values for each mat bin
+(res <- t(sapply(split(dat_no.na, list(dat_no.na$mat_breaks)),
+                 function(subd){summary(lm(sr_trans ~ prs_m, data = subd))$coefficients[2,c(1,4)]}))) 
+res <- as.data.frame(res)
+names(res) <- c("prs_coef", "prs_pvalue")
+
+# get mean mat_m per group
+#mat_mean <- tapply(dat_no.na$mat_m, dat_no.na$mat_breaks, mean)
+res$mat_bin_means <- as.numeric(mat_mean)
+
+ggplot(res, aes(x=mat_bin_means, y=prs_coef))+
+  geom_point(aes(shape=prs_pvalue<0.05, col=prs_coef), size=1.7)+
+  #scale_color())+
+  scale_y_continuous("SR~prs coefficient")+
+  theme(legend.position = "null", 
+        plot.background = element_blank(),
+        panel.background = element_blank())+
+  geom_hline(yintercept = 0, lty=2)
+ggsave("figures/slope_mat2.png",width=2.5, height=2,units="in")
+
+# visualize as map
+#simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
+#simpsons_map$prs_dynamics <- "positive"
+#simpsons_map$prs_dynamics[simpsons_map$LEVEL_3_CO %in% 
+#                            dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
+# add slopes for all bins
+res$mat_breaks <- c(1:10)
+# merge level 3 in via mat_bin_means
+temp <- merge(dat_no.na[, c("mat_breaks", "level3")], res, all.x=TRUE)
+simpsons_map <- merge(simpsons_map, temp[,c("level3","prs_coef","prs_pvalue")],
+                      by.x="LEVEL_3_CO", by.y="level3", all.x=TRUE)
+
+simpsons_map$prs_coef2 <- simpsons_map$prs_coef
+simpsons_map$prs_coef2[simpsons_map$prs_pvalue>0.05] <- NA
+(my_plot3 <- ggplot(simpsons_map) + 
+    geom_sf(aes(fill = prs_coef2), lwd=0.1) + 
+    scale_fill_continuous("", na.value="grey70", 
+                          limits=c(min(simpsons_map$prs_coef, na.rm=T),
+                                  max(simpsons_map$prs_coef, na.rm=T)))+
+    theme_void()+
+    theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
+          legend.background = element_blank(),
+          legend.key = element_blank(),
+          legend.key.width = unit(3, "mm"),
+          legend.key.height = unit(6, "mm"),
+          legend.text = element_blank())
+)
+
+logo_file <- readPNG("figures/slope_mat2.png")
+my_plot_4 <- ggdraw() +
+  draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
+  draw_plot(my_plot3)
+my_plot_4
+ggsave("figures/prs_scale_map.png", dpi=600, width=10, height=7)
+
+
+## Global patterns for precipitation seasonality influence on SR
+### get slopes and p-values for each mat bin
+(res <- t(sapply(split(dat_no.na, list(dat_no.na$mat_breaks)),
+                 function(subd){summary(lm(sr_trans ~ prs_m, data = subd))$coefficients[2,c(1,4)]}))) 
+res <- as.data.frame(res)
+names(res) <- c("prs_coef", "prs_pvalue")
+
+# get mean mat_m per group
+#mat_mean <- tapply(dat_no.na$mat_m, dat_no.na$mat_breaks, mean)
+res$mat_bin_means <- as.numeric(mat_mean)
+
+ggplot(res, aes(x=mat_bin_means, y=prs_coef))+
+  geom_point(aes(shape=prs_pvalue<0.05, col=prs_coef), size=1.7)+
+  #scale_color())+
+  scale_y_continuous("SR~prs coefficient")+
+  theme(legend.position = "null", 
+        plot.background = element_blank(),
+        panel.background = element_blank())+
+  geom_hline(yintercept = 0, lty=2)
+ggsave("figures/slope_mat2.png",width=2.5, height=2,units="in")
+
+# visualize as map
+#simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
+#simpsons_map$prs_dynamics <- "positive"
+#simpsons_map$prs_dynamics[simpsons_map$LEVEL_3_CO %in% 
+#                            dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
+# add slopes for all bins
+res$mat_breaks <- c(1:10)
+# merge level 3 in via mat_bin_means
+temp <- merge(dat_no.na[, c("mat_breaks", "level3")], res, all.x=TRUE)
+simpsons_map <- merge(simpsons_map, temp[,c("level3","prs_coef","prs_pvalue")],
+                      by.x="LEVEL_3_CO", by.y="level3", all.x=TRUE)
+
+simpsons_map$prs_coef2 <- simpsons_map$prs_coef
+simpsons_map$prs_coef2[simpsons_map$prs_pvalue>0.05] <- NA
+(my_plot3 <- ggplot(simpsons_map) + 
+    geom_sf(aes(fill = prs_coef2), lwd=0.1) + 
+    scale_fill_continuous("", na.value="grey70", 
+                          limits=c(min(simpsons_map$prs_coef, na.rm=T),
+                                   max(simpsons_map$prs_coef, na.rm=T)))+
+    theme_void()+
+    theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
+          legend.background = element_blank(),
+          legend.key = element_blank(),
+          legend.key.width = unit(3, "mm"),
+          legend.key.height = unit(6, "mm"),
+          legend.text = element_blank())
+)
+
+logo_file <- readPNG("figures/slope_mat2.png")
+my_plot_4 <- ggdraw() +
+  draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
+  draw_plot(my_plot3)
+my_plot_4
+ggsave("figures/prs_scale_map.png", dpi=600, width=10, height=7)
 
 #save.image("processed_data/results.RData")
 
