@@ -50,7 +50,6 @@ Large data files that can be freely accessed online (i.e. CRU TS, WordClim) are 
 
 **All steps are recorded, the final data set used for maps, figures and structural equation modeling is *sem_input_data.rds***.
 
-ssh test
 
 ### Primary data
 
