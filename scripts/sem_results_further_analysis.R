@@ -302,26 +302,28 @@ my_plot_4
 ggsave("figures/prs_scale_map.png", dpi=600, width=10, height=7)
 
 
-## Global patterns for precipitation seasonality influence on SR
-### get slopes and p-values for each mat bin
-(res <- t(sapply(split(dat_no.na, list(dat_no.na$mat_breaks)),
-                 function(subd){summary(lm(sr_trans ~ prs_m, data = subd))$coefficients[2,c(1,4)]}))) 
+
+
+## Global patterns for area influence on MRD
+### get slopes and p-values for each soil bin
+(res <- t(sapply(split(dat_no.na, list(dat_no.na$soil_breaks)),
+                 function(subd){summary(lm(mrd ~ area, data = subd))$coefficients[2,c(1,4)]}))) 
 res <- as.data.frame(res)
-names(res) <- c("prs_coef", "prs_pvalue")
+names(res) <- c("area_coef", "area_pvalue")
 
 # get mean mat_m per group
-#mat_mean <- tapply(dat_no.na$mat_m, dat_no.na$mat_breaks, mean)
-res$mat_bin_means <- as.numeric(mat_mean)
+soil_mean <- tapply(dat_no.na$soil, dat_no.na$soil_breaks, mean)
+res$soil_bin_means <- as.numeric(soil_mean)
 
-ggplot(res, aes(x=mat_bin_means, y=prs_coef))+
-  geom_point(aes(shape=prs_pvalue<0.05, col=prs_coef), size=1.7)+
-  #scale_color())+
-  scale_y_continuous("SR~prs coefficient")+
+ggplot(res, aes(x=soil_bin_means, y=area_coef))+
+  geom_point(aes(col=area_coef, shape=area_pvalue<0.05), size=1.7)+
+  scale_color_continuous("", limits = c(-1,3))+
+  scale_y_continuous("MRD~area coefficient", limits = c(-1,3))+
   theme(legend.position = "null", 
         plot.background = element_blank(),
         panel.background = element_blank())+
   geom_hline(yintercept = 0, lty=2)
-ggsave("figures/slope_mat2.png",width=2.5, height=2,units="in")
+ggsave("figures/slope_soil.png",width=2.5, height=2,units="in")
 
 # visualize as map
 #simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
@@ -329,19 +331,20 @@ ggsave("figures/slope_mat2.png",width=2.5, height=2,units="in")
 #simpsons_map$prs_dynamics[simpsons_map$LEVEL_3_CO %in% 
 #                            dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
 # add slopes for all bins
-res$mat_breaks <- c(1:10)
+res$soil_breaks <- c(1:10)
 # merge level 3 in via mat_bin_means
-temp <- merge(dat_no.na[, c("mat_breaks", "level3")], res, all.x=TRUE)
-simpsons_map <- merge(simpsons_map, temp[,c("level3","prs_coef","prs_pvalue")],
+temp <- merge(dat_no.na[, c("soil_breaks", "level3")], res, all.x=TRUE)
+simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
+simpsons_map <- merge(simpsons_map, temp[,c("level3","area_coef","area_pvalue")],
                       by.x="LEVEL_3_CO", by.y="level3", all.x=TRUE)
 
-simpsons_map$prs_coef2 <- simpsons_map$prs_coef
-simpsons_map$prs_coef2[simpsons_map$prs_pvalue>0.05] <- NA
+simpsons_map$area_coef2 <- simpsons_map$area_coef
+simpsons_map$area_coef2[simpsons_map$area_pvalue>0.05] <- NA
 (my_plot3 <- ggplot(simpsons_map) + 
-    geom_sf(aes(fill = prs_coef2), lwd=0.1) + 
+    geom_sf(aes(fill = area_coef), lwd=0.1) + 
     scale_fill_continuous("", na.value="grey70", 
-                          limits=c(min(simpsons_map$prs_coef, na.rm=T),
-                                   max(simpsons_map$prs_coef, na.rm=T)))+
+                          limits=c(-1,
+                                   max(simpsons_map$area_coef, na.rm=T)))+
     theme_void()+
     theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
           legend.background = element_blank(),
@@ -351,12 +354,12 @@ simpsons_map$prs_coef2[simpsons_map$prs_pvalue>0.05] <- NA
           legend.text = element_blank())
 )
 
-logo_file <- readPNG("figures/slope_mat2.png")
+logo_file <- readPNG("figures/slope_soil.png")
 my_plot_4 <- ggdraw() +
   draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
   draw_plot(my_plot3)
 my_plot_4
-ggsave("figures/prs_scale_map.png", dpi=600, width=10, height=7)
+ggsave("figures/area_scale_map.png", dpi=600, width=10, height=7)
 
 #save.image("processed_data/results.RData")
 
