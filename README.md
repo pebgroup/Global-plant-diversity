@@ -99,5 +99,5 @@ best_model.RData		        | final structural equation model lavaan object
 
 ## Analysis workflow
 <p align="left">
-<img src="flow_chart_wcvp.png" width=1000/>  
+<img src="flow_chart_wcvp.png" width=1200/>  
 </p>  
