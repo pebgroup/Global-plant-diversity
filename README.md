@@ -2,16 +2,11 @@
 
 ## About
 
-Using the World Checklist of Vascular Plants (WCVP, [1]) taxonomy and distribution data, and phylogeny [2] to spatially analyze environmental (climate, soil, topography) and evolutionary (diversification rates) drivers of global plant diversity (species richness) patterns.
-
-
-[1] WCVP, World Checklist of Vascular Plants, version 2.0. Facilitated by the Royal Botanic Gardens, Kew (2021) (Retrieved 21 June 2020)
-
-[2] S. A. Smith, J. W. Brown, Constructing a broadly inclusive seed plant phylogeny. Am. J. Bot. 105, 302–314 (2018)
+We integrate a recent compilation of global species richness on the botanical country level with novel estimates of diversification rate and environmental variables, to analyse how their interaction shapes today’s global species richness distribution. All scripts to run this analysis are stored in this repository.
 
 ## Scripts
 
-All scripts are stored in *publish_scripts* folder. To go through the analysis step by step, open *master_analysis.R*, which sources all other scripts required to repeat analysis. The header in the master script contains system requirements and execution time information.
+Scripts are stored in *scripts* folder and accessed through *master_analysis.R*, which sources all other scripts. The header in the master script contains system requirements and execution time information.
 
 Script                          | Job
 --------------------------------|--------------------------------------------------------------------------
@@ -40,15 +35,13 @@ WCP_cleanup.R                   | Data cleaning
 [3] APG IV. An update of the Angiosperm Phylogeny Group classification for the orders and families of flowering plants: APG IV. Botanical Journal of the Linnean Society, 2016, 181, 1–20.
 
 ### Reproducibility and completeness
-Please note that for the sake of reproducibility, we include *all* scripts. That includes also scripts processing large primary data files which are not included in the supplement for size reasons (i.e. CRU TS, wordclim, soil). Results from processing these files are included however. To repeat these steps, the necessary data can be obtained as free downloads (link in description part).
+Please note that for the sake of reproducibility, we include *all* scripts. That includes also scripts processing large primary data files which are not included in the supplement for size reasons (i.e. CRU TS, wordclim, soil). The processed data are included however. To repeat these steps, the necessary data can be obtained as free downloads (link in description part).
 
 
 ## Data
-Primary data are files obtained online / by collaborators. Processed data are files which are produced during the analysis steps and stored to shorten execution time for later analysis steps and to keep work space small.
+Primary data are files obtained online / from collaborators. Processed data are files which are produced during the analysis steps and stored to shorten execution time for later analysis steps and to keep work space small.
 
 Large data files that can be freely accessed online (i.e. CRU TS, WordClim) are not part of the supplement but listed with version number and information how to obtain them.
-
-**All steps are recorded, the final data set used for maps, figures and structural equation modeling is *sem_input_data.rds***.
 
 
 ### Primary data
@@ -57,8 +50,8 @@ File                        | Description
 ---------------------------- | --------------------------------------------------------------------------
 checklist_names.txt         | Text file containing World Checklist of Vascular Plants taxonomy, taxon status, unique ID and synonyms
 checklist_distribution.txt  | Text file containing World Checklist of Vascular Plants taxon presence data in botanical countries
-ALLMB.tre		                | Phylogney with GenBank and Open Tree of Life taxa with a backbone provided by Magallón et al. (2015). From Smith & Brown 2018
-GBMB.tre			              | Phylogney with GenBank taxa with a backbone provided by Magallón et al. (2015). From Smith & Brown 2018. Used to identify taxa with molecular information
+ALLMB.tre		                | Phylogeny with GenBank and Open Tree of Life taxa with a backbone provided by Magallón et al. (2015). From Smith & Brown 2018
+GBMB.tre			              | Phylogeny with GenBank taxa with a backbone provided by Magallón et al. (2015). From Smith & Brown 2018. Used to identify taxa with molecular information
 ott.rds                     | Open Tree of Life taxonomy file (.rds version of taxonomy.tsv, Version: 3.0. Available on https://tree.opentreeoflife.org/about/taxonomy-version/ott3.0). Used to identify source for tip label name (NCBI or GBIF)
 fin_species_match_NCBI.rds  | List with taxonomy matching results for NCBI phylogeny tip labels with WCVP IDs
 gbif_all.rds                | Download of taxonomic information from GBIF for GBIF phylogeny tip labels 
@@ -67,11 +60,6 @@ fern_list.txt               | List of fern and fern allies families (Pteridophyt
 soil_raster_layer_000832.tif| Soil raster layer with most probable soil types, available on https://files.isric.org/soilgrids/latest/data/wrb/MostProbable.vrt and saved as geotiff with lower resolution for reasonable computation time
 shapefile_biomes/wwf_terr_ecos.*	| Shapefile with terrestrial ecoregions of the world (biomes). Available on https://www.worldwildlife.org/publications/terrestrial-ecoregions-of-the-world
 shapefile_bot_countries/level3.*   | Shapefile with polygons for all 369 TDWG level 3 units
-
- 
-### Primary data not included but online:
-File                            | Description
----------------------------- | --------------------------------------------------------------------------
 wc2.1_30s_elev.tif		          | WorldClim elevation data, available on https://biogeo.ucdavis.edu/data/worldclim/v2.1/base/wc2.1_30s_elev.zip
 cru_ts4.04.1901.2019.pet.dat.nc | CRU TS v. 4.04, available on https://catalogue.ceda.ac.uk/uuid/89e1e34ec3554dc98594a5732622bce9.  Free account required for download.
 cru_ts4.04.1901.2019.tmp.dat.nc | see above 
