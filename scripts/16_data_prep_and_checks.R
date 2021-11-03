@@ -29,7 +29,7 @@ my_corrplot(cor.dat_no.na, lab=TRUE, p.mat = p.dat_no.na, insig = "blank",
   theme(axis.text.x = element_text(margin=margin(0,0,0,0)),  # Order: top, right, bottom, left
         axis.text.y = element_text(margin=margin(0,0,0,0)),
         plot.margin = margin(0, 0, 0, 0, "cm"))
-ggsave("publish_figures/correlation_april2021.png", width=7, height=6, units = "in", dpi = 600)
+ggsave("figures/correlation_sep2021.png", width=7, height=6, units = "in", dpi = 600)
 
 
 # monitor pet_m + mat_m, mat_m + tra_m for multicollinearity
@@ -51,7 +51,7 @@ gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3),
 
 # GBMs  #####################################################################################
 
-set.seed(123)
+set.seed(509)
 gbm_SR <- train(sr ~ ., data = dat_no.na[,-grep("level3", names(dat_no.na))], method = "gbm", 
                      trControl = gbmControl, verbose=FALSE,
                      tuneGrid=gbmGrid)
@@ -61,7 +61,8 @@ gbm_sr <- ggplot(summary(gbm_SR), aes(x=reorder(var, rel.inf), y=rel.inf))+
   coord_flip()+
   xlab("")+ylab("Relative influence")
 
-set.seed(100) 
+
+set.seed(617) 
 gbm_MRD <- train(mrd ~ ., data = dat_no.na[,-grep("sr|level3",names(dat_no.na))], method = "gbm", 
                      trControl = gbmControl, verbose=FALSE,
                      tuneGrid=gbmGrid)
@@ -72,7 +73,7 @@ gbm_mrd <- ggplot(summary(gbm_MRD), aes(x=reorder(var, rel.inf), y=rel.inf))+
   xlab("")+ylab("Relative influence")
 
 plot_grid(gbm_sr, gbm_mrd, labels = c("a)", "b)"), ncol = 2)
-ggsave("publish_figures/varImp_gbm_April2021.png", width=7, height=4, units = "in", dpi = 600)
+ggsave("figures/varImp_gbm_Sep2021.png", width=7, height=4, units = "in", dpi = 600)
 
 
 
@@ -86,7 +87,6 @@ ggsave("publish_figures/varImp_gbm_April2021.png", width=7, height=4, units = "i
 # library(semPlot)
 # library(modEvA)
 # library(fitdistrplus)
-# source("scripts/clean_semplot_functions.R") # script for modified plotting functions
 
 # load data ###################################################################################################
 #dat_no.na <-  readRDS("processed_data/data_for_SEM.rds")
@@ -186,6 +186,8 @@ dat_no.na <- dat_no.na[,-grep("level3",names(dat_no.na))]
 dat_no.na <- apply(dat_no.na, 2, ztrans)
 dat_no.na <- as.data.frame(dat_no.na)
 
+# rename prs variable for clarity
+
 saveRDS(dat_no.na, "processed_data/sem_input_data.rds")
 # feed this into model selection
 
@@ -209,7 +211,7 @@ summary(lm_sr)
 summary(lm_sr1)
 summary(lm_sr2)
 # removing mat_m is more efficient in reducing VIFs, removing pet_m leaves more explanatory power.
-# --> If problems occurr, remove pet_m and keep mat_m
+# --> If problems occur, remove pet_m before mat_m
 
 
 
@@ -225,8 +227,8 @@ sort(car::vif(lm_mrd2))
 summary(lm_mrd)$r.squared
 summary(lm_mrd1)$r.squared
 summary(lm_mrd2)$r.squared
-# removing mat_m is more efficient in reducing VIFs, removing pet_m leaves slightly more explanatory power.
-# Same decision as above if necessary
+# removing mat_m is more efficient in reducing VIFs, removing pet_m leaves slightly less explanatory power.
+# No preference. See which one performs better, avoid having both in same regression
 
 
 # indirect effects:

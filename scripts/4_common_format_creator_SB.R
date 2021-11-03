@@ -6,13 +6,18 @@
 # GBIF ##################################################################################
 
 # transform list to dataframe
+## extract data from list
+gbif <- sapply(gbif, "[[", "data") 
+
 ## removing lines that do not include all required columns
 cols <- c("key", "scientificName", "authorship",
           "taxonomicStatus", "rank", "family", "genus",
           "species")
+
 func1 <- function(x){all(cols %in% names(x))}
-remo <- which(unlist(lapply(gbif, func1))==FALSE)
+remo <- which(unlist(lapply(gbif, func1))==FALSE) 
 non.null.res <- gbif[-remo]
+rm(gbif)
 
 taxonID <- sapply(non.null.res, "[[", "key")
 scientificName <- sapply(non.null.res, "[[", "scientificName")

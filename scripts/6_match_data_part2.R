@@ -20,25 +20,36 @@ fin[is.na(fin[,col_merge[1]]),col_merge[1]] <- fin[is.na(fin[,col_merge[1]]),col
 fin <- fin[,-col_merge[2]]
 names(fin)[grep(tax_level, names(fin))] <- "accepted_id"
 
-table(is.na(fin$accepted_id))/nrow(fin) # 85% matches
+table(is.na(fin$accepted_id))/nrow(fin) # 85.2% matches
 
 
-table(is.na(fin$accepted_id[fin$source=="ncbi"]))/nrow(fin[fin$source=="ncbi",]) # 85.2%
-table(is.na(fin$accepted_id[fin$source=="gbif"]))/nrow(fin[fin$source=="gbif",]) # 84.3%
+table(is.na(fin$accepted_id[fin$source=="ncbi"]))/nrow(fin[fin$source=="ncbi",]) # 85.5%
+table(is.na(fin$accepted_id[fin$source=="gbif"]))/nrow(fin[fin$source=="gbif",]) # 85.1%
 
 # should be all accepted, check:
-wcp <- readRDS("processed_data/apg_wcp_jun_20_clean.rds")
+wcp <- readRDS("processed_data/apg_wcp_jul_21_clean.rds")
 gbif_labels <- fin[fin$source=="gbif",]
 ncbi_labels <- fin[fin$source=="ncbi",]
+
 table(wcp$taxon_status[wcp$plant_name_id %in% gbif_labels$accepted_id])
 table(wcp$taxon_status[wcp$plant_name_id %in% ncbi_labels$accepted_id])
-wcp <- wcp[wcp$plant_name_id %in% fin$accepted_id,]
-table(wcp$taxon_status)
 
-if(all(wcp$taxon_status=="Accepted")){print("All taxa have status accepted")
+# # manual correct Citrus pennivesiculata (724235-az --> 724129-az)
+# fin$accepted_id[fin$accepted_id=="724235-az"] <- "724129-az"
+
+wcp_tip_sub <- wcp[which(wcp$plant_name_id %in% fin$accepted_id),]
+table(wcp_tip_sub$taxon_status)
+
+
+
+
+
+
+if(all(wcp_tip_sub$taxon_status=="Accepted")){print("All taxa have status accepted")
 }else{stop("There are non-accepted taxa in the tip labels!")}  
 
 
+#View(fin[which(!fin$accepted_id %in% wcp$accepted_plant_name_id),])
 
 
 
@@ -51,7 +62,7 @@ phylo_org <- phylo
 phylo$tip.label <- fin$accepted_id[match(phylo$tip.label, fin$tips)]
 
 ## duplicates
-length(which(table(phylo$tip.label)>1)) # duplicated tip labels
+length(which(table(phylo$tip.label)>1)) # duplicated tip labels: 21,963
 
 resolve_multiple <- function(MATCHES, wcp, phylo, phylo_org, phylogb){
   # matches = accepted WCSP ID tip labels, phylo=phylogeny with labels replaced, phylo_org=original tip labels
@@ -89,7 +100,7 @@ resolve_multiple <- function(MATCHES, wcp, phylo, phylo_org, phylogb){
     MATCHES[tips[erase]] <- NA
   }
   counter <- counter + 1
-  if(!counter%%100) print(counter)# cat(counter,"\r")
+  if(!counter%%1) print(counter)# cat(counter,"\r")
   return(MATCHES)
 }
 

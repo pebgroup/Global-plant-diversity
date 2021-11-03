@@ -68,24 +68,32 @@ bind.tip2 <- function (tree, tip.label, edge.length = NULL, where = NULL,
 }
       
 
-wcp <- wcp %>% select(-family) %>%
-  rename("family" = "family.apg")
+wcp <- wcp %>% 
+  dplyr::select(-family) %>%
+  dplyr::rename("family" = "family.apg")
 
 # remove ferns + moss
 wcp <- wcp[!wcp$family %in% ferns,]
-wcp <- wcp[!wcp$family %in% "Isoetaceae",] # special character thing
+wcp <- wcp[!wcp$family %in% "Isoetaceae",] # remove fern family not caught because of special character
 
 
 # get list of all accepted species
-goodspp <- wcp[wcp$genus_hybrid == "" &
-                  wcp$species_hybrid == "" &
-                  wcp$infraspecific_rank == "" &
-                  wcp$species != "" &
-                  wcp$taxon_status == "Accepted",]
+# goodspp <- wcp[wcp$genus_hybrid == "" &
+#                   wcp$species_hybrid == "" &
+#                   wcp$infraspecific_rank == "" &
+#                   wcp$species != "" &
+#                   wcp$taxon_status == "Accepted",]
+goodspp <- wcp[is.na(wcp$genus_hybrid) &
+              is.na(wcp$species_hybrid) &
+              is.na(wcp$infraspecific_rank) &
+              !is.na(wcp$species) &
+              wcp$taxon_status == "Accepted",]
 saveRDS(goodspp, "processed_data/goodspp.rds")
 
 # get list of good species that are not in matching
-toadd <- goodspp[!goodspp$plant_name_id %in% phylo$tip.label,]
+toadd <- goodspp[!goodspp$plant_name_id %in% phylo$tip.label,] #nrow=63,677
+toadd <- as.data.frame(toadd)
+goodspp <- as.data.frame(goodspp)
 
 # create index for orders
 {unresolved_families <- list()
@@ -107,7 +115,7 @@ fams <- unique(as.vector(goodspp[goodspp$plant_name_id %in% as.vector(phylo$tip.
 # families not in the tree yet: fams=tree families, families=to be added families
 lefties <- families[which(!families %in% fams)]
 lefties[which(lefties %in% unresolved_families)]
-nrow(toadd[toadd$family %in% lefties,])
+nrow(toadd[toadd$family %in% lefties,]) # 9 entries with families that are not in the tree
 
 
 
@@ -115,7 +123,7 @@ nrow(toadd[toadd$family %in% lefties,])
 
 
 # reduce toadd for testing purposes
-#toadd <- toadd[sample(c(1:nrow(toadd)), 100, replace=FALSE),]
+#toadd <- toadd[sample(c(1:nrow(toadd)), 200, replace=FALSE),]
 
 # initialize vector to record which method to use to find MRCA (genus = 1, family = 2, or order = 3)
 method <- vector("numeric", nrow(toadd))
@@ -180,8 +188,8 @@ for(i in 1:nrow(toadd)){
   if(i %% ceiling(nrow(toadd)/100) == 0) print(paste(i/ceiling(nrow(toadd)/100), "% complete", Sys.time()))
 }
 
-saveRDS(taxa_not_added, "processed_data/taxa_not_added.rds")
-write.tree(phylo, "processed_data/allmb_matched_added_species_Apr21.tre")
+saveRDS(taxa_not_added, "processed_data/taxa_not_added_Sep21.rds")
+write.tree(phylo, "processed_data/allmb_matched_added_species_Sep21.tre")
 
 
 
@@ -189,7 +197,7 @@ write.tree(phylo, "processed_data/allmb_matched_added_species_Apr21.tre")
 # test results from adding species ############################################
 er <- readRDS("processed_data/taxa_not_added.rds")
 goodspp <- readRDS("processed_data/goodspp.rds")
-fin_tree <- read.tree("processed_data/allmb_matched_added_species_Apr21.tre")
+fin_tree <- read.tree("processed_data/allmb_matched_added_species_Sep21.tre")
 
 length(fin_tree$tip.label) # species in the tree
 er # species not added to the tree
@@ -206,6 +214,24 @@ not_listed <- fin_tree$tip.label[!fin_tree$tip.label %in% wcp$accepted_plant_nam
 wcp[wcp$plant_name_id %in% not_listed,]
 tree_mod <- drop.tip(fin_tree, not_listed)
 
-table(tree_mod$tip.label %in% wcp$accepted_plant_name_id) # tip labels not listed as accepted
-write.tree(tree_mod, "processed_data/allmb_matched_added_species_clean.tre")
+table(tree_mod$tip.label %in% wcp$accepted_plant_name_id) # tip labels not listed as accepted, needs to be 0
+
+# check ultrametric?
+is.ultrametric(tree_mod)
+is.ultrametric(phylo)
+library(castor)
+all_distances = get_all_distances_to_root(tree_mod)
+tip_distances = all_distances[1:length(tree_mod$tip.label)]
+range(tip_distances)
+all_distances.sb = get_all_distances_to_root(phylo)
+tip_distances.sb = all_distances.sb[1:length(phylo$tip.label)]
+range(tip_distances.sb)
+# same as in the original tree, not changed by adding taxa
+
+# make ultrametric (use tip extension to avoid NxN matrix storage issues)
+## from the vignett: This function provides a quick-and-dirty way to make a tree ultrametric, or to correct small numericalinaccuracies in supposed-to-be ultrametric trees.
+tree_mod <- extend_tree_to_height(tree_mod, new_height=NULL)
+ultra_tree <- tree_mod[[1]]
+is.ultrametric(ultra_tree)
+write.tree(ultra_tree, "processed_data/allmb_matched_added_species_Sep21_clean.tre")
 

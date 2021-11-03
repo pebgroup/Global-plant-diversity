@@ -9,15 +9,19 @@ trueCentroids = as.data.frame(gCentroid(shape,byid=TRUE))
 
 # get species richness
 sr_df <- data.frame(species_richness = rowSums(sr), region =row.names(sr))
+#sr_2020_df <- data.frame(species_richness = rowSums(sr_2020), region =row.names(sr_2020))
+
 
 # Add SR, MRD and centroids to shapefile #########################################
 shape@data$sr <- sr_df$species_richness
+#shape@data$sr_2020 <- sr_2020_df$species_richness
 shape@data$mrd <- mrd$mrd
+#shape@data$mrd_2020 <- mrd_2020$mrd
 shape@data$MRD.sd <- mrd$mrd_sd
 shape@data$lng <- trueCentroids[,1]
 shape@data$lat <- trueCentroids[,2]
 
- rm(sr)
+rm(sr)
 
 
 #### Add environmental variables to shape file #####################################

@@ -1,12 +1,9 @@
-library("tidyverse")
-library("stringr")
-
 #### SETUP #########
 
 # Choose database, possible values: WCP, NCBI, BIEN, GBIF 
 # You can chose more than 1 (e.g. c("BIEN", "NCBI", "GBIF")) 
 
-data_folder_path <- "./processed_data/" # depends on where your working directory is set
+#data_folder_path <- "./processed_data/" # depends on where your working directory is set
 
 # if using BIEN, remove mosses and moss allis
 bryophyta <- "bryophyta.csv"
@@ -21,9 +18,9 @@ f.apg <- read.csv("data/apgweb_parsed.csv", stringsAsFactors = F)
 
 f.apg <- f.apg %>% 
   filter(!(str_detect(Clade, "near_") | str_detect(Clade, "fossil"))) %>% 
-  select(Syn_Fam, Acc_Fam, Clade)
+  dplyr::select(Syn_Fam, Acc_Fam, Clade)
 
-# Intresting thing: "Adoxaceae" is treated as "syn" name of "Viburnaceae" in APWeb, which is conflict with APG IV; need to swap
+# Interesting note: "Adoxaceae" is treated as "syn" name of "Viburnaceae" in APWeb, which is conflict with APG IV; need to swap
 
 # > f.apg[grep("Adoxaceae", f.apg$Syn_Fam),]
 # Syn_Fam     Acc_Fam      Clade
@@ -34,10 +31,12 @@ f.apg[grep("Viburnaceae", f.apg$Syn_Fam),]$Acc_Fam <- "Adoxaceae"
 # also one more family names "Rhipogonaceae" was not recorded in APWeb
 # so Manual added in "Rhipogonaceae" == "Ripogonaceae"  
 # manually adding Osmundaceae as its accepted according to http://powo.science.kew.org/taxon/urn:lsid:ipni.org:names:77126775-1
+# adding Tiganophytaceae = Brassicales, appears now on WebAPG
 
 f.apg <- rbind.data.frame(f.apg, c("Rhipogonaceae", "Ripogonaceae", "Liliales"),
                           c("Ripogonaceae", "Ripogonaceae", "Liliales"),
-                          c("Osmundaceae", "Osmundaceae", "")) %>%  
+                          c("Osmundaceae", "Osmundaceae", ""),
+                          c("Tiganophytaceae", "Tiganophytaceae", "Brassicales")) %>%  
   arrange(Syn_Fam) %>% 
   unique()
 
@@ -58,14 +57,14 @@ if("NCBI" %in% db){
   
 
   #Ripogonaceae
-  f.ncbi <- NCBI %>% select(family) %>% unique()
-  fam.apg <-f.apg%>% select(family) %>% unique()
+  f.ncbi <- NCBI %>% dplyr::select(family) %>% unique()
+  fam.apg <-f.apg%>% dplyr::select(family) %>% unique()
   
   setdiff(f.ncbi$family, fam.apg$family)
   # should be empty.   # [1] "Ripogonaceae" has been acounted for in line 33
 
   NCBI.tmp <- NCBI %>% 
-    select(-order) %>% 
+    dplyr::select(-order) %>% 
     arrange(family) %>% 
     unique()
   NCBI.apg <- left_join(NCBI.tmp, f.apg, by="family")
@@ -73,7 +72,7 @@ if("NCBI" %in% db){
   write.csv(NCBI.apg, "./results/Spermatophyta_NCBI_APG_checked.csv", row.names = F, quote = F)
   # checklist <- NULL
   # for (i in NCBI.apg$ncbi_id[duplicated(NCBI.apg$ncbi_id)]){
-  #   dd <- NCBI.apg[NCBI.apg$ncbi_id==i,] %>% select(family, family.apg, order)
+  #   dd <- NCBI.apg[NCBI.apg$ncbi_id==i,] %>% dplyr::select(family, family.apg, order)
   #   checklist <- rbind.data.frame(checklist, dd)
   # }
   # 
@@ -84,32 +83,20 @@ if("NCBI" %in% db){
 if("WCP" %in% db){
   WCP <- readRDS(paste0(data_folder_path, WCP_input_filename))
   
-  #check for no match and fix
-  
+  # check if all families are represented and add if necessary manually
   setdiff(unique(WCP$family), unique(f.apg$family))
-  # Should be:  [1] "Byxaceae"       "Gigaspermaceae" "Incertae_sedis"    "Oligomeris"     "Schoberia"      "v" 
-
-  ########################################################################
-  # caution: several invalid strings in fern clade names (check before do)#
-  ########################################################################
-  # #ferns families
-  # "Aspleniaceae"
-  # "Osmundaceae" 
-  # "Polypodiaceae"
-  # "Isoetaceae"
-  # "v"=="Ophioglossum"="1142939-az"
-  # "Ophioglossaceae" 
-  # "Schizaeaceae"
-  # #mosse remove
-  # "Gigaspermaceae"
-  #Incertae_sedis
-  # > unique(WCP[grep("Incertae_sedis", WCP$family),]$genus)
-  # [1] "Angeja"      "Anonymos"    "Cipum"       "Euphrona"    "Ivonia"      "Pouslowia"  
-  # [7] "Theodoricea" "Thuraria"    "Urceola"
+  # WCVP2021: [1] "Incertae_sedis"  "Pseudotubulare"  "Gigaspermaceae" 
   
-  # remove mosses & incertae_sedis uncomment this line below if want to keep ferns
+ 
+  # Pseudotubulare = not a family name, Synonym entry
+  # Gigaspermaceae = moss family
+  # Incertae_sedis:
+  unique(WCP[grep("Incertae_sedis", WCP$family),]$genus)
+  # [1] "Cipum"       "Anonymos"    "Theodoricea" "Thuraria"    "Urceola"     "Pouslowia"   "Euphrona"    "Ivonia"
+  
+  # remove mosses & incertae_sedis. uncomment this line below if want to keep ferns
   ## Gigaspermatacea: 2 cases, both synonyms (415628-az, 411899-az)
-  ## Invertae_sedis: 20 taxa, all synonyms or unplaced. could be matched as synonym when ignoring the family (step3), so keep them
+  ## Invertae_sedis: 20 taxa, all synonyms or unplaced. Could be matched as synonym when ignoring the family (step3), so keep them
   moss.inc <- c("Gigaspermaceae")
   WCP1 <- WCP %>% 
     filter(!(family %in% moss.inc)) 
@@ -118,27 +105,11 @@ if("WCP" %in% db){
   #comment line below if want to keep ferns and uncomment the lines above
   #ferns.moss.inc <- c("Aspleniaceae", "Osmundaceae", "Polypodiaceae", "Isoetaceae", "Ophioglossaceae", "Schizaeaceae", "Gigaspermaceae", "Incertae_sedis")
   #WCP1 <- WCP %>% filter(!(family %in% ferns.moss.inc)) %>% filter(accepted_plant_name_id!="1142939-az")
-  
-  #rename
-  # "Oligomeris" "Resedaceae", "1012613-az"
-  # 
-  # "Schoberia" "Amaranthaceae"
-  
-  # > unique(WCP[grep("869344-az", WCP$accepted_plant_name_id),]$family)
-  # [1] "Buxaceae" "Byxaceae"
-  
-  # WCP1$family <- mgsub::mgsub(WCP1$family, c("Byxaceae", "Oligomeris", "Schoberia"), c("Buxaceae", "Resedaceae", "Amaranthaceae"))
-  # correct famlies names
-  WCP1$family <- gsub("Byxaceae", "Buxaceae", WCP1$family)
-  WCP1$family <- gsub("Oligomeris", "Resedaceae", WCP1$family)
-  WCP1$family <- gsub("Schoberia", "Amaranthaceae", WCP1$family)
-  
-  # WCP2 <- WCP1 %>% filter(accepted_plant_name_id!="1142939-az")
+
   setdiff(unique(WCP1$family), unique(f.apg$family))
   
   # manual fix
-  WCP1$family[WCP1$family=="v"] <- "Ophioglossaceae"
-  
+  WCP1 <- WCP1[!WCP1$family=="Pseudotubulare",]
   WCP.apg <- left_join(WCP1, f.apg, by="family")
   
   saveRDS(WCP.apg, paste0(data_folder_path, "apg_", WCP_input_filename))

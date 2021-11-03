@@ -11,7 +11,7 @@ fin$tips_mod <- gsub("_", " ", fin$tips) # replace underscore with space
 table(fin$tips_mod %in% ott$name) / length(fin$tips_mod) # 0.997
       
 ott <- ott[ott$name %in% fin$tips_mod,]
-ott_sub <- ott[-which(!ott$uniqname==""),] # remove bacteria and marine stuff
+ott_sub <- ott[-which(!ott$uniqname==""),] # remove bacteria and marine taxa
 rm(ott)
 
 # check sources for the tip labels
@@ -38,13 +38,13 @@ ott_ncbi$ncbi_id <- gsub(",gbif:[0-9].*", "", one)
 ott_ncbi$ncbi_id <- gsub(",.*", "", ott_ncbi$ncbi_id)
 
 # MATCH NCBI TIP LABELS 
-# combine elevated to species colum with the rest - what happens if species is not defined?
+# combine elevated to species column with the rest - what happens if species is not defined?
 matches$elevated_to_species_id[which(is.na(matches$elevated_to_species_id))] <- matches$accepted_plant_name_id[which(is.na(matches$elevated_to_species_id))]
 matches <- matches[,c(tax_level, "id")]
 
 ott_ncbi <- merge(ott_ncbi, matches, 
              by.x="ncbi_id", by.y="id", all.x=TRUE)
-table(is.na(ott_ncbi$elevated_to_species_id)) / nrow(ott_ncbi) # 85.2% matches 
+table(is.na(ott_ncbi$elevated_to_species_id)) / nrow(ott_ncbi) # 85.5% matches 
 
 ## merge into fin
 fin <- merge(fin, ott_ncbi[,c("name", "ncbi_id", tax_level)], 

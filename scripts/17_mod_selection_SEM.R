@@ -4,6 +4,7 @@
 # build regression character strings ###############################################################################
 sr_variables <- c("sub_trop_dbf",  "pre_sd", "mont_gs", "mat_sd", "sea_sd", "tra_m", "pre_m", "tri", "pet_sd", "tra_sd",
                   "mat_m", "pet_m", "sea_m")
+
 mrd_variables <- c("mat_m", "tra_m", "tri", "soil", "sea_sd", "tra_sd", "pre_sd", "temp_bmf", "pet_m",  "pet_sd",   
                    "mat_sd", "area")
 fixed_sr <- c("sr_trans ~ soil + sub_trop_mbf + area + mrd +")

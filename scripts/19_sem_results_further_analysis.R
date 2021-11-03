@@ -8,7 +8,7 @@ cat(max.var.mod_mod7)
 fm <- "
 sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + m*mat_m + prs_m + tr0*tri
 mrd ~ p2*pre_m + trf2*sub_trop_mbf + prs_m + tra_m + s1*soil + tri + mat_m + a3*area 
-soil ~ a1*area + ms1*mont_gs + trf1*sub_trop_mbf
+soil ~ a1*area + ms1*mont_gs
 sub_trop_mbf ~ p1*pre_m + t1*tra_m + m1*mat_m + a2*area + tr1*tri
 
 # indirect paths on SR
@@ -16,8 +16,6 @@ sr_area_via_trf := a1*s + a2*trf
 sr_area_via_soil := a1*s
 sr_area_total := a + a1*s + a2*trf
 
-sr_subtrop_mbf_via_soil := trf1*trf
-sr_subtrop_mbf_total := trf1*trf +trf
 
 sr_pre_m_via_trf := p1*trf
 
@@ -80,7 +78,7 @@ pres2[,c(6)] <- round(pres2[,c(c(6))],3)
 
 write_xlsx(pres2[order(pres2$op, pres2$lhs, abs(pres2$est.std), decreasing = T),],
            "processed_data/sem_model_coefficients.xls") 
-# open that table in google sheets and copy paste it from there to avoid manual work and typos!
+# open that table in google sheets and copy paste it from there into the document to avoid manual work and typos!
 
 
 
@@ -89,8 +87,6 @@ lavCor(fm.fit) # observed correlations
 inspect(fm.fit, what="cor.all") # model-implied correlations among variables
 resid(fm.fit, "cor")
 # Large positive values indicate the model under-predicts the correlation; large negative values suggest over-prediction of correlation. Values around |r>.1| are worth closer consideration.
-# Note: adding a soil~mat_m path improves model fit, has no further effect though and is not causation
-
 
 
 # Univariate VS model regressions ##############################################################
@@ -102,31 +98,44 @@ plot_sr <- dat_no.na[,c("sr_trans", sig.sr$rhs)]
 plot_sr <- pivot_longer(plot_sr, col=-sr_trans)
 plot_sr$std.all <- rep(sig.sr$est.std, nrow(dat_no.na))
 plot_sr$name[plot_sr$name=="sea_m"] <- "prs_m"
-ggplot(plot_sr, aes(x=value, y=sr_trans))+
+# var_names_sr <- c(
+#   `area` = "Area",
+#   `mat_m` = "Mean annual temperature",
+#   `prs_m` = "Precipitation seasonality",
+#   `soil` = "Number soil types",
+#   `sub_trop_mbf` = "Tropical rainforest cover",
+#   `tra_m` = "Annual temperature range",
+#   `tri` = "Terrain ruggedness"
+# )
+scatterplot_sr <- ggplot(plot_sr, aes(x=value, y=sr_trans))+
   geom_point(alpha=0.3)+
   ylab("species richness")+
-  facet_wrap(~name, scales = "free")+
+  facet_wrap(~name, scales = "free", ncol = 4)+# labeller = as_labeller(var_names_sr))+
   geom_smooth(method="lm", se=F)+
   geom_abline(aes(slope=std.all, intercept=0), col="grey20")+
   theme(strip.background = element_blank())
-ggsave("figures/scatterplot_sig_effects_SR.png",  width=7, height=7, units = "in", dpi = 600)
+#ggsave("figures/scatterplot_sig_effects_SR.png",  width=7, height=7, units = "in", dpi = 600)
 
 sig.mrd <- pres3[pres3$lhs %in% c("mrd"),]
 plot_mrd <- dat_no.na[,c("mrd", sig.mrd$rhs)]
 plot_mrd <- pivot_longer(plot_mrd, col=-mrd)
 plot_mrd$std.all <- rep(sig.mrd$est.std, nrow(dat_no.na))
 plot_mrd$name[plot_mrd$name=="sea_m"] <- "prs_m"
-ggplot(plot_mrd, aes(x=value, y=mrd))+
+scatterplot_mrd <- ggplot(plot_mrd, aes(x=value, y=mrd))+
   geom_point(alpha=0.3)+
-  ylab("species richness")+
-  facet_wrap(~name, scales = "free")+
+  ylab("mean root distance")+
+  facet_wrap(~name, scales = "free", ncol=4)+
   geom_smooth(method="lm", se=F)+
   geom_abline(aes(slope=std.all, intercept=0), col="grey20")+
   theme(strip.background = element_blank())
-ggsave("figures/scatterplot_sig_effects_MRD.png",  width=5, height=5, units = "in", dpi = 600)
+#ggsave("figures/scatterplot_sig_effects_MRD.png",  width=5, height=5, units = "in", dpi = 600)
 
+plot_grid(ncol = 1, rel_heights = c(1, 0.54),
+          labels = c("a)", "b)"),
+          scatterplot_sr, scatterplot_mrd)
+ggsave("figures/scatterplot_sig_effects_all.png",  width=8, height=7, units = "in", dpi = 600)
 
-# --> Might be pointing at a Simpsons paradox?
+# Simpsons paradox? ###########
 
 ## SR tra_m and tra_m 
 cor(dat_no.na[,c("sr_trans", "mat_m", "prs_m", "tra_m")])
@@ -135,7 +144,9 @@ dat_no.na$mat_breaks <- c(1:n)[cut(dat_no.na$mat_m, breaks=n)]
 # dat_no.na$tra_breaks <- c(1:n)[cut(dat_no.na$tra_m, breaks=n)]
 # dat_no.na$prs_breaks <- c(1:n)[cut(dat_no.na$prs_m, breaks=n)]
 
-simp_tra1<- Simpsons(tra_m, sr_trans, clusterid = mat_breaks, data=dat_no.na, nreps=500) 
+simp_tra1<- Simpsons(tra_m, sr_trans, data=dat_no.na, nreps=500) 
+simp_tra1<- Simpsons(tra_m, sr_trans, clusterid = mat_breaks, data=dat_no.na, nreps=500)
+simp_sea1<-Simpsons(prs_m, sr_trans, data=dat_no.na, nreps=500) 
 simp_sea1<-Simpsons(prs_m, sr_trans, clusterid = mat_breaks, data=dat_no.na, nreps=500) 
 # signs for simpsons paradox in both when clustering for mat_m
 
@@ -165,6 +176,7 @@ n=10
 dat_no.na$soil_breaks <- c(1:n)[cut(dat_no.na$soil, breaks=n)]
 table(dat_no.na$soil_breaks)
 
+simp_area1 <- Simpsons(area, mrd, data=dat_no.na, nreps=500) 
 simp_area1 <- Simpsons(area, mrd, clusterid = soil_breaks, data=dat_no.na, nreps=500) 
 
 area_mrd <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
@@ -177,18 +189,21 @@ area_mrd <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_
 empty <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
   geom_blank()+
   theme_void()
+
 top_row <- plot_grid(ncol = 2, rel_widths = c(0.8,1),
           labels = c("a)", "b)"),
           tra_sr, prs_sr)
 bottom_row <- plot_grid(ncol = 2, rel_widths = c(1, 0.77),
-                        labels = c("c)", ""),
+                        labels = c("", ""),
                         area_mrd, empty)
 plot_grid(top_row, bottom_row, nrow=2)
-ggsave("figures/simpsons_paradox.png", width=7, height=7, units = "in", dpi = 600)
+#ggsave("figures/simpsons_paradox.png", width=7, height=7, units = "in", dpi = 600)
 
+plot_grid(top_row, nrow=1)
+ggsave("figures/simpsons_paradox_SR.png", width=7, height=3.5, units = "in", dpi = 600)
 
-
-
+plot_grid(bottom_row, nrow=1)
+ggsave("figures/simpsons_paradox_MRD.png", width=7, height=3.5, units = "in", dpi = 600)
 
 ## Global patterns for temperature range influence on SR
 ### get slopes and p-values for each mat bin
@@ -311,14 +326,19 @@ ggsave("figures/prs_scale_map.png", dpi=600, width=10, height=7)
 res <- as.data.frame(res)
 names(res) <- c("area_coef", "area_pvalue")
 
+
 # get mean mat_m per group
 soil_mean <- tapply(dat_no.na$soil, dat_no.na$soil_breaks, mean)
 res$soil_bin_means <- as.numeric(soil_mean)
 
+# exclude the NaN area p value (first row)
+res <- res[-1,]
+
+
 ggplot(res, aes(x=soil_bin_means, y=area_coef))+
   geom_point(aes(col=area_coef, shape=area_pvalue<0.05), size=1.7)+
-  scale_color_continuous("", limits = c(-1,3))+
-  scale_y_continuous("MRD~area coefficient", limits = c(-1,3))+
+  scale_color_continuous("")+ # set limits manually
+  scale_y_continuous("MRD~area coefficient", limits = c(-1,3.5))+
   theme(legend.position = "null", 
         plot.background = element_blank(),
         panel.background = element_blank())+
@@ -370,7 +390,7 @@ ggsave("figures/area_scale_map.png", dpi=600, width=10, height=7)
 # Spatial autocorrelation ########################################################################
 ## Uses code from https://github.com/jebyrnes/spatial_correction_lavaan to get residuals 
 
-load("processed_data/results.RData")
+#load("processed_data/results.RData") # this loads data from may, delete
 dat_no.na <- dat_no.na[order(dat_no.na$level3),]
 
 # get coordinates 
@@ -474,7 +494,7 @@ temp <- pivot_longer(moran, cols = c("sr.moransI", "mrd.moransI"))
 ggplot(temp, aes(x=dist.class, y=value, col=name)) +
   geom_line()+
   scale_x_continuous("Distance class (km)")+
-  scale_color_discrete("SEM residuals", labels=c("mrd", "sr"))+
+  scale_color_discrete("SEM residuals", labels=c("MRD", "SR"))+
   ylab("Moran's I")
 ggsave("figures/SAC_sem_residuals.png", width=5, height=, units = "in", dpi = 600)
 
@@ -506,8 +526,8 @@ all <- merge(pres2, res)
 all <- all[,c("lhs", "rhs", "est.std","se", "pvalue",
               "Estimate_sac", "Std.err_sac", "P(>|z|)_sac")]
 
-# write_xlsx(all[order(all$lhs, abs(all$est.std), decreasing = T),],
-#            "processed_data/sem_model_coefficients_SAC_correction.xls")
+write_xlsx(all[order(all$lhs, abs(all$est.std), decreasing = T),],
+          "processed_data/sem_model_coefficients_SAC_correction.xls")
 
 
 
@@ -675,7 +695,7 @@ ggsave("figures/map_lat_patterns_alt.png", width=7.6, height=4, bg = "transparen
 
 
 # save region maps
-# shp_2 = st_shift_longitude(shp)
+shp_2 = st_shift_longitude(shp)
 # ggplot(shp_2[shp_2$CONTINENT %in% c("NORTHERN AMERICA", "SOUTHERN AMERICA"),]) + 
 #   geom_sf(lwd=0, fill = "grey30")+
 #   theme(panel.grid = element_blank())

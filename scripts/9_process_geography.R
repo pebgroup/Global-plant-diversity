@@ -8,7 +8,6 @@ all(phylo$tip.label %in% wcp$accepted_plant_name_id)
 sub <- wcp[wcp$accepted_plant_name_id %in% phylo$tip.label,]
 all(phylo$tip.label %in% sub$accepted_plant_name_id)
 
-
 # create empty community matrix
 ## rows = botanical countries
 ## cols = number of unique accepted plant IDs = number of taxa in the phylogeny

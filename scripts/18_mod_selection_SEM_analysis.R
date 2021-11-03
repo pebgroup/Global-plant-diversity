@@ -74,7 +74,7 @@ fit2$model.name <- gsub("sea_sd", "prs_sd", fit2$model.name)
 
 # model fit
 length(which(fit2$cfi.robust>0.9)) # 257 with acceptable cfi
-length(which(fit2$rmsea.robust<0.12)) # 4 with RMSEA < 0.12
+length(which(fit2$rmsea.robust<0.125)) # 4 with RMSEA < 0.125
 
 # explanatory power for SR and MRD
 pow <- sapply(models, "[", 3)
@@ -122,8 +122,8 @@ rm(gm.mrd.sp, gm.mrd, gm.mrd.n, gm.sr, gm.sr.n)
 fit2$var.n <- fit2$gm.sr.n+fit2$gm.mrd.n
 # ggplot(fit2, aes(factor(var.n), cfi.robust)) +
 #   geom_boxplot()
-# 
-# 
+
+
 
 
 
@@ -147,34 +147,38 @@ modificationindices(best_cfi.fit, sort. = TRUE)[1:15,]
 
 # MODS on the best model according to CFI #
 fitmeasures(best_cfi.fit, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
-best_cfi.fit.mod <- update(best_cfi.fit, add="sub_trop_mbf~area")
+best_cfi.fit.mod <- update(best_cfi.fit, add="mrd~area")
 fitmeasures(best_cfi.fit.mod, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_cfi.fit.mod, sort. = TRUE)[1:15,]
 
-best_cfi.fit.mod2 <- update(best_cfi.fit.mod, add="mrd~area")
+best_cfi.fit.mod2 <- update(best_cfi.fit.mod, add="sub_trop_mbf~area")
 fitmeasures(best_cfi.fit.mod2, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_cfi.fit.mod2, sort. = TRUE)[1:15,]
 
 best_cfi.fit.mod3 <- update(best_cfi.fit.mod2, add="sr_trans ~ mat_m")
 fitmeasures(best_cfi.fit.mod3, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_cfi.fit.mod3, sort. = TRUE)[1:15,]
-
+# RMSEA up 
 best_cfi.fit.mod4 <- update(best_cfi.fit.mod3, add="sr_trans ~ prs_m")
 fitmeasures(best_cfi.fit.mod4, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_cfi.fit.mod4, sort. = TRUE)[1:15,]
-
+# RMSEA down
 best_cfi.fit.mod5 <- update(best_cfi.fit.mod4, add="mrd ~ tra_m")
 fitmeasures(best_cfi.fit.mod5, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 # rmsea goes up
 modificationindices(best_cfi.fit.mod5, sort. = TRUE)[1:20,]
 
-best_cfi.fit.mod6 <- update(best_cfi.fit.mod4, add="sub_trop_mbf ~ prs_m")
+best_cfi.fit.mod6 <- update(best_cfi.fit.mod4, add="sr_trans ~ tra_m")
 fitmeasures(best_cfi.fit.mod6, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
-# AIC goes up
+# all stable
+modificationindices(best_cfi.fit.mod6, sort. = TRUE)[1:20,]
+
+best_cfi.fit.mod7 <- update(best_cfi.fit.mod6, add="mrd ~ tra_m")
+fitmeasures(best_cfi.fit.mod7, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# RMSEA goes up
 
 
-
-png("publish_figures/best_cfi_model.png", width=900, height=500, units = "px")
+png("figures/best_cfi_model_2021.png", width=900, height=500, units = "px")
 par(mfrow=c(1,2))
 semPaths(object = best_cfi.fit, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
@@ -182,12 +186,12 @@ semPaths(object = best_cfi.fit, layout = "circle2", rotation = 1,
          nCharNodes = 0, fade=FALSE,
          edgeLabels = sem_sig_labels(best_cfi.fit))
 title(round(fitmeasures(best_cfi.fit, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
-semPaths(object = best_cfi.fit.mod4, layout = "circle2", rotation = 1,
+semPaths(object = best_cfi.fit.mod6, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
          exoCov = FALSE, exoVar = FALSE,
          nCharNodes = 0, fade=FALSE,
-         edgeLabels = sem_sig_labels(best_cfi.fit.mod4))
-title(round(fitmeasures(best_cfi.fit.mod4, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
+         edgeLabels = sem_sig_labels(best_cfi.fit.mod6))
+title(round(fitmeasures(best_cfi.fit.mod6, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
 dev.off()
 
 
@@ -200,46 +204,48 @@ modificationindices(best_rmsea.fit, sort. = TRUE)[1:15,]
 
 # MODS on the best model according to RMSEA #
 fitmeasures(best_rmsea.fit, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
-best_rmsea_mod <- paste0(best_rmsea, "\nsub_trop_mbf~area")
+best_rmsea_mod <- paste0(best_rmsea, "\nmrd~area")
 best_rmsea.fit.mod <- sem(best_rmsea_mod, data = dat_no.na, estimator="MLM")
 fitmeasures(best_rmsea.fit.mod, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_rmsea.fit.mod, sort. = TRUE)[1:15,]
-best_rmsea_mod2 <- paste0(best_rmsea_mod, "\nsoil  ~ mont_gs")
+best_rmsea_mod2 <- paste0(best_rmsea_mod, "\nsub_trop_mbf  ~ area")
 best_rmsea.fit.mod2 <- sem(best_rmsea_mod2, data = dat_no.na, estimator="MLM")
 fitmeasures(best_rmsea.fit.mod2, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_rmsea.fit.mod2, sort. = TRUE)[1:15,]
-best_rmsea_mod3 <- paste0(best_rmsea_mod2, "\nmrd ~ area")
+best_rmsea_mod3 <- paste0(best_rmsea_mod2, "\nsub_trop_mbf ~ tri")
 best_rmsea.fit.mod3 <- sem(best_rmsea_mod3, data = dat_no.na, estimator="MLM")
 fitmeasures(best_rmsea.fit.mod3, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_rmsea.fit.mod3, sort. = TRUE)[1:15,]
-best_rmsea_mod4 <- paste0(best_rmsea_mod3, "\nsub_trop_mbf~tri")
+best_rmsea_mod4 <- paste0(best_rmsea_mod3, "\nsr_trans~mat_m")
 best_rmsea.fit.mod4 <- sem(best_rmsea_mod4, data = dat_no.na, estimator="MLM")
 fitmeasures(best_rmsea.fit.mod4, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# rmsea up, aic down
 modificationindices(best_rmsea.fit.mod4, sort. = TRUE)[1:15,]
-best_rmsea_mod5 <- paste0(best_rmsea_mod4, "\nsr_trans ~ mat_m")
+best_rmsea_mod5 <- paste0(best_rmsea_mod4, "\nsr_trans ~ prs_m")
 best_rmsea.fit.mod5 <- sem(best_rmsea_mod5, data = dat_no.na, estimator="MLM")
 fitmeasures(best_rmsea.fit.mod5, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_rmsea.fit.mod5, sort. = TRUE)[1:15,]
-best_rmsea_mod6 <- paste0(best_rmsea_mod5, "\nsr_trans ~ prs_m")
+best_rmsea_mod6 <- paste0(best_rmsea_mod5, "\nsr_trans ~ tri")
 best_rmsea.fit.mod6 <- sem(best_rmsea_mod6, data = dat_no.na, estimator="MLM")
 fitmeasures(best_rmsea.fit.mod6, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_rmsea.fit.mod6, sort. = TRUE)[1:15,]
 best_rmsea_mod7 <- paste0(best_rmsea_mod6, "\nsr_trans ~ tra_m")
 best_rmsea.fit.mod7 <- sem(best_rmsea_mod7, data = dat_no.na, estimator="MLM")
 fitmeasures(best_rmsea.fit.mod7, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
-modificationindices(best_rmsea.fit.mod7, sort. = TRUE)[1:15,]
+modificationindices(best_rmsea.fit.mod7, sort. = TRUE)[1:20,]
 best_rmsea_mod8 <- paste0(best_rmsea_mod7, "\nmrd ~ tra_m")
 best_rmsea.fit.mod8 <- sem(best_rmsea_mod8, data = dat_no.na, estimator="MLM")
 fitmeasures(best_rmsea.fit.mod8, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
-modificationindices(best_rmsea.fit.mod8, sort. = TRUE)[1:15,]
-best_rmsea_mod9 <- paste0(best_rmsea_mod8, "\nsub_trop_mbf~prs_m")
-best_rmsea.fit.mod9 <- sem(best_rmsea_mod9, data = dat_no.na, estimator="MLM")
-fitmeasures(best_rmsea.fit.mod9, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# stop, all goes up
+# modificationindices(best_rmsea.fit.mod8, sort. = TRUE)[1:15,]
+# best_rmsea_mod9 <- paste0(best_rmsea_mod8, "\nsub_trop_mbf~prs_m")
+# best_rmsea.fit.mod9 <- sem(best_rmsea_mod9, data = dat_no.na, estimator="MLM")
+# fitmeasures(best_rmsea.fit.mod9, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 # too much
 
-cat(best_rmsea_mod8)
+cat(best_rmsea_mod7)
 
-png("publish_figures/best_rmsea_model.png", width=900, height=500, units = "px")
+png("figures/best_rmsea_model2021.png", width=900, height=500, units = "px")
 par(mfrow=c(1,2))
 semPaths(object = best_rmsea.fit, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
@@ -247,12 +253,12 @@ semPaths(object = best_rmsea.fit, layout = "circle2", rotation = 1,
          nCharNodes = 0, fade=FALSE,
          edgeLabels = sem_sig_labels(best_rmsea.fit))
 title(round(fitmeasures(best_rmsea.fit, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
-semPaths(object = best_rmsea.fit.mod6, layout = "circle2", rotation = 1,
+semPaths(object = best_rmsea.fit.mod7, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
          exoCov = FALSE, exoVar = FALSE,
          nCharNodes = 0, fade=FALSE,
-         edgeLabels = sem_sig_labels(best_rmsea.fit.mod6))
-title(round(fitmeasures(best_rmsea.fit.mod6, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
+         edgeLabels = sem_sig_labels(best_rmsea.fit.mod7))
+title(round(fitmeasures(best_rmsea.fit.mod7, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
 dev.off()
 
 
@@ -271,26 +277,27 @@ best_global_aic.mod <- paste0(best_global_aic, "\nsr_trans ~ temp_bmf")
 best_global_aic.mod.fit <- sem(best_global_aic.mod, data = dat_no.na, estimator="MLM")
 fitmeasures(best_global_aic.mod.fit, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_global_aic.mod.fit, sort. = TRUE)[1:15,]
-best_global_aic.mod2 <- paste0(best_global_aic.mod, "\nsub_trop_mbf~area")
+best_global_aic.mod2 <- paste0(best_global_aic.mod, "\nsr_trans~mat_m")
 best_global_aic.mod.fit2 <- sem(best_global_aic.mod2, data = dat_no.na, estimator="MLM")
 fitmeasures(best_global_aic.mod.fit2, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_global_aic.mod.fit2, sort. = TRUE)[1:20,]
-best_global_aic.mod3 <- paste0(best_global_aic.mod2, "\nsr_trans~mat_m")
+best_global_aic.mod3 <- paste0(best_global_aic.mod2, "\nsub_trop_mbf~area")
 best_global_aic.mod.fit3 <- sem(best_global_aic.mod3, data = dat_no.na, estimator="MLM")
 fitmeasures(best_global_aic.mod.fit3, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_global_aic.mod.fit3, sort. = TRUE)[1:25,]
 best_global_aic.mod4 <- paste0(best_global_aic.mod3, "\nmrd~area")
 best_global_aic.mod.fit4 <- sem(best_global_aic.mod4, data = dat_no.na, estimator="MLM")
 fitmeasures(best_global_aic.mod.fit4, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
-# RMSEA GOES UP
 modificationindices(best_global_aic.mod.fit4, sort. = TRUE)[1:25,]
 best_global_aic.mod5 <- paste0(best_global_aic.mod4, "\nsub_trop_mbf~tri")
 best_global_aic.mod.fit5 <- sem(best_global_aic.mod5, data = dat_no.na, estimator="MLM")
 fitmeasures(best_global_aic.mod.fit5, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# rmsea goes up
 modificationindices(best_global_aic.mod.fit5, sort. = TRUE)[1:25,]
 best_global_aic.mod6 <- paste0(best_global_aic.mod5, "\nsr_trans~prs_m")
 best_global_aic.mod.fit6 <- sem(best_global_aic.mod6, data = dat_no.na, estimator="MLM")
 fitmeasures(best_global_aic.mod.fit6, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# rmsea keeps going up
 modificationindices(best_global_aic.mod.fit6, sort. = TRUE)[1:25,]
 best_global_aic.mod7 <- paste0(best_global_aic.mod6, "\nmrd~tra_m")
 best_global_aic.mod.fit7 <- sem(best_global_aic.mod7, data = dat_no.na, estimator="MLM")
@@ -298,7 +305,7 @@ fitmeasures(best_global_aic.mod.fit7, c("chisq", "df", "pvalue", "cfi.robust", "
 modificationindices(best_global_aic.mod.fit7, sort. = TRUE)[1:25,]
 # RMSEA just keeps going up, no more meaningful changes
 
-png("publish_figures/best_global_aic_model.png", width=900, height=500, units = "px")
+png("figures/best_global_aic_model_2021.png", width=900, height=500, units = "px")
 par(mfrow=c(1,2))
 semPaths(object = best_global_aic.fit, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
@@ -306,12 +313,12 @@ semPaths(object = best_global_aic.fit, layout = "circle2", rotation = 1,
          nCharNodes = 0, fade=FALSE,
          edgeLabels = sem_sig_labels(best_global_aic.fit))
 title(round(fitmeasures(best_global_aic.fit, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
-semPaths(object = best_global_aic.mod.fit7, layout = "circle2", rotation = 1,
+semPaths(object = best_global_aic.mod.fit4, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
          exoCov = FALSE, exoVar = FALSE,
          nCharNodes = 0, fade=FALSE,
-         edgeLabels = sem_sig_labels(best_global_aic.mod.fit7))
-title(round(fitmeasures(best_global_aic.mod.fit7, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
+         edgeLabels = sem_sig_labels(best_global_aic.mod.fit4))
+title(round(fitmeasures(best_global_aic.mod.fit4, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
 dev.off()
 
 
@@ -327,14 +334,14 @@ nrow(fin_good) # models with potential
 ## pre-select, best AIC ranking, most variables ######################
 min.aic <- min(fin_good$aic)
 fin_good_aic <- fin_good[fin_good$aic<min.aic+2,]
-nrow(fin_good_aic) # 27# 21 good models with lowest AIC + max 2 more aic points = set of basically identical AICs
+nrow(fin_good_aic) # 27# #21 18 good models with lowest AIC + max 2 more aic points = set of basically identical AICs
 fin_good_aic[,-7]
 ### most variables
 hist(fin_good_aic$var.n)
 
-(m.aic <- max(fin_good_aic$var.n)) # 12 variables
+(m.aic <- max(fin_good_aic$var.n)) # 13 variables
 fin_good_aic_min <- fin_good_aic[which(fin_good_aic$var.n==m.aic),] 
-nrow(fin_good_aic_min) # 12 good models
+nrow(fin_good_aic_min) # 3 good models
 cat(fin_good_aic_min$model.name)
 fin_good_aic_min[which.min(fin_good_aic_min$aic),-7]
 
@@ -361,6 +368,25 @@ best_aic.fit.mod4 <- sem(best_aic_mod4, data = dat_no.na, estimator="MLM")
 fitmeasures(best_aic.fit.mod4, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_aic.fit.mod4, sort. = TRUE)[1:15,]
 # RMSEA goes up
+## adding sr_trans to mrd crashes the model
+# best_aic_mod5 <- paste0(best_aic_mod4, "\nmrd~sr_trans") # danger zone
+# best_aic.fit.mod5 <- sem(best_aic_mod5, data = dat_no.na, estimator="MLM")
+# fitmeasures(best_aic.fit.mod5, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# modificationindices(best_aic.fit.mod5, sort. = TRUE)[1:15,]
+# best_aic_mod6 <- paste0(best_aic_mod5, "\nsub_trop_mbf~prs_m")
+# best_aic.fit.mod6 <- sem(best_aic_mod6, data = dat_no.na, estimator="MLM")
+# fitmeasures(best_aic.fit.mod6, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# # goes up, stop
+# modificationindices(best_aic.fit.mod6, sort. = TRUE)[1:15,]
+# best_aic_mod7 <- paste0(best_aic_mod6, "\nsr_trans~tra_m")
+# best_aic.fit.mod7 <- sem(best_aic_mod7, data = dat_no.na, estimator="MLM")
+# fitmeasures(best_aic.fit.mod7, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# modificationindices(best_aic.fit.mod7, sort. = TRUE)[1:15,]
+# best_aic_mod8 <- paste0(best_aic_mod7, "\nsub_trop_mbf~prs_m")
+# best_aic.fit.mod8 <- sem(best_aic_mod8, data = dat_no.na, estimator="MLM")
+# fitmeasures(best_aic.fit.mod8, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# # CFI down, RMSEA and AIC up
+ # alternative
 best_aic_mod5 <- paste0(best_aic_mod4, "\nsr_trans~prs_m")
 best_aic.fit.mod5 <- sem(best_aic_mod5, data = dat_no.na, estimator="MLM")
 fitmeasures(best_aic.fit.mod5, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
@@ -380,7 +406,7 @@ fitmeasures(best_aic.fit.mod8, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.r
 
 cat(best_aic_mod7)
 
-png("publish_figures/best_aic_model.png", width=900, height=500, units = "px")
+png("figures/best_aic_model_2021.png", width=900, height=500, units = "px")
 par(mfrow=c(1,2))
 semPaths(object = best_aic.fit, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
@@ -397,8 +423,6 @@ title(round(fitmeasures(best_aic.fit.mod7, c("cfi.robust", "rmsea.robust", "aic"
 dev.off()
 
 
-
-
 ### minimum AIC in good models, regardless of number of variables########################################
 cat(fin_good_aic$model.name[which.min(fin_good_aic$aic)])
 fin_good_aic[which.min(fin_good_aic$aic),-7]
@@ -408,39 +432,50 @@ summary(best_abs_aic.fit, standardized = TRUE, fit.measures=TRUE, rsq=TRUE)
 fitmeasures(best_abs_aic.fit, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_abs_aic.fit, sort. = TRUE)[1:15,]
 
-best_abs_aic_mod <- paste0(best_abs_aic, "\nsub_trop_mbf~area")
+best_abs_aic_mod <- paste0(best_abs_aic, "\nmrd~area")
 best_abs_aic.fit.mod <- sem(best_abs_aic_mod, data = dat_no.na, estimator="MLM")
 fitmeasures(best_abs_aic.fit.mod, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_abs_aic.fit.mod, sort. = TRUE)[1:15,]
 
-best_abs_aic_mod2 <- paste0(best_abs_aic_mod, "\nmrd~area")
+best_abs_aic_mod2 <- paste0(best_abs_aic_mod, "\nsub_trop_mbf~area")
 best_abs_aic.fit.mod2 <- sem(best_abs_aic_mod2, data = dat_no.na, estimator="MLM")
 fitmeasures(best_abs_aic.fit.mod2, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_abs_aic.fit.mod2, sort. = TRUE)[1:15,]
 
-best_abs_aic_mod3 <- paste0(best_abs_aic_mod2, "\nsr_trans ~ mat_m")
+best_abs_aic_mod3 <- paste0(best_abs_aic_mod2, "\nsub_trop_mbf ~ tri")
 best_abs_aic.fit.mod3 <- sem(best_abs_aic_mod3, data = dat_no.na, estimator="MLM")
 fitmeasures(best_abs_aic.fit.mod3, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_abs_aic.fit.mod3, sort. = TRUE)[1:15,]
 
-best_abs_aic_mod4 <- paste0(best_abs_aic_mod3, "\nsr_trans ~ prs_m")
+best_abs_aic_mod4 <- paste0(best_abs_aic_mod3, "\nsr_trans ~ mat_m")
 best_abs_aic.fit.mod4 <- sem(best_abs_aic_mod4, data = dat_no.na, estimator="MLM")
 fitmeasures(best_abs_aic.fit.mod4, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_abs_aic.fit.mod4, sort. = TRUE)[1:15,]
-
-best_abs_aic_mod5 <- paste0(best_abs_aic_mod4, "\nmrd ~ tra_m")
+# rmsea up
+best_abs_aic_mod5 <- paste0(best_abs_aic_mod4, "\nsr_trans ~ prs_m")
 best_abs_aic.fit.mod5 <- sem(best_abs_aic_mod5, data = dat_no.na, estimator="MLM")
 fitmeasures(best_abs_aic.fit.mod5, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(best_abs_aic.fit.mod5, sort. = TRUE)[1:15,]
-# RMSEA goes up
-best_abs_aic_mod6 <- paste0(best_abs_aic_mod5, "\nsr_trans ~ tra_m")
+
+best_abs_aic_mod6 <- paste0(best_abs_aic_mod5, "\nsr_trans ~ tri")
 best_abs_aic.fit.mod6 <- sem(best_abs_aic_mod6, data = dat_no.na, estimator="MLM")
 fitmeasures(best_abs_aic.fit.mod6, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
-# aic goes up
+modificationindices(best_abs_aic.fit.mod6, sort. = TRUE)[1:15,]
 
-cat(best_abs_aic_mod5)
+best_abs_aic_mod7 <- paste0(best_abs_aic_mod6, "\nsr_trans ~ tra_m")
+best_abs_aic.fit.mod7 <- sem(best_abs_aic_mod7, data = dat_no.na, estimator="MLM")
+fitmeasures(best_abs_aic.fit.mod7, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+modificationindices(best_abs_aic.fit.mod7, sort. = TRUE)[1:15,]
 
-png("publish_figures/best_absolute_aic_model.png", width=900, height=500, units = "px")
+best_abs_aic_mod8 <- paste0(best_abs_aic_mod7, "\nsub_trop_mbf ~ prs_m")
+best_abs_aic.fit.mod8 <- sem(best_abs_aic_mod8, data = dat_no.na, estimator="MLM")
+fitmeasures(best_abs_aic.fit.mod8, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
+# rmsea jumps up
+
+
+cat(best_abs_aic_mod7)
+
+png("figures/best_absolute_aic_model_2021.png", width=900, height=500, units = "px")
 par(mfrow=c(1,2))
 semPaths(object = best_abs_aic.fit, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
@@ -448,12 +483,12 @@ semPaths(object = best_abs_aic.fit, layout = "circle2", rotation = 1,
          nCharNodes = 0, fade=FALSE,
          edgeLabels = sem_sig_labels(best_abs_aic.fit))
 title(round(fitmeasures(best_abs_aic.fit, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
-semPaths(object = best_abs_aic.fit.mod5, layout = "circle2", rotation = 1,
+semPaths(object = best_abs_aic.fit.mod7, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
          exoCov = FALSE, exoVar = FALSE,
          nCharNodes = 0, fade=FALSE,
-         edgeLabels = sem_sig_labels(best_abs_aic.fit.mod5))
-title(round(fitmeasures(best_abs_aic.fit.mod5, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
+         edgeLabels = sem_sig_labels(best_abs_aic.fit.mod7))
+title(round(fitmeasures(best_abs_aic.fit.mod7, c("cfi.robust", "rmsea.robust", "aic")),3), cex.main=1)
 dev.off()
 
 
@@ -505,7 +540,7 @@ max.var.mod.fit.mod6 <- sem(max.var.mod_mod6, data = dat_no.na, estimator="MLM")
 fitmeasures(max.var.mod.fit.mod6, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(max.var.mod.fit.mod6, sort. = TRUE)[1:15,]
 
-max.var.mod_mod7 <- paste0(max.var.mod_mod6, "\nsr_trans~tri")
+max.var.mod_mod7 <- paste0(max.var.mod_mod6, "\nsr_trans~tra_m") # FIRST CHANGE! tra instead of tri
 max.var.mod.fit.mod7 <- sem(max.var.mod_mod7, data = dat_no.na, estimator="MLM")
 fitmeasures(max.var.mod.fit.mod7, c("chisq", "df", "pvalue", "cfi.robust", "rmsea.robust", "aic"))
 modificationindices(max.var.mod.fit.mod7, sort. = TRUE)[1:15,]
@@ -517,7 +552,7 @@ fitmeasures(max.var.mod.fit.mod8, c("chisq", "df", "pvalue", "cfi.robust", "rmse
 
 cat(max.var.mod_mod7)
 
-png("publish_figures/max_var_model.png", width=900, height=500, units = "px")
+png("figures/max_var_model_2021.png", width=900, height=500, units = "px")
 par(mfrow=c(1,2))
 semPaths(object = max.var.mod.fit, layout = "circle2", rotation = 1,
          whatLabels="std", label.cex = 1.5, edge.label.cex = 1, what = "std", 
