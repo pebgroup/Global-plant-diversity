@@ -10,29 +10,29 @@ Scripts are stored in *scripts* folder and accessed through *master_analysis.R*,
 
 Script                          | Job
 --------------------------------|--------------------------------------------------------------------------
-add_species_server_version.R    | Adding species taxonomically to a phylogeny
-APG_family_lookup.R             | Adjust family names for APG 4 System [3]
-assemble_dataset.R              | Assemble final data set (environmental, evolutionary and species richness data)
-clean_semplot_functions.R       | Helper functions for cleaner structural equation model plots
-common_format_creator_SB.R      | Builds common format for taxonomic names from GBIF data to feed into the taxonomy matcher
-data_prep_and_checks.R          | Get correlations, variable importance analysis, distribution + transformation where necessary, multicolinearity tests, scaling data
-functions.R                     | Functions called mostly in phylogeny processing and SEM anaylsis and spatial autocorrelation correction
-get_biomes.R                    | Process biome data
-get_climate.R                   | Process climate data
-get_soil.R                      | Process soil data
-get_topography.R                | Process elevation data for terrain ruggedness index
-match_data.R                    | Get tip label name sources, match NCBI-based tip labels with WCVP accepted taxa IDs
-match_data_part2.R              | Match GBIF-based tip labels with WCVP accepted taxa IDs. Replace tip labels with WCVP accepted IDs
-mod_selection_SEM.R             | Building Structural Equation Models with possible variable combinations, collecting models stats
-mod_selection_SEM_analysis.R    | Get stats from model selection, manual model adjustments
-phylostruct.R                   | Computing mean root distance for TDWG level 3 units 
-process_geography.R             | Building presence matrix for WCVP accepted taxa in TDWG level 3 units
-resolve_polytomies.R            | Repeatedly resolve polytomies in phylogeny and record average root distance for each tip
-sem_results_further_analysis.R  | Inspect tructural equation model path coefficients, compare with univariate regressions, spatial autocorrelation anaylsis, figures and maps 
-taxonomic_matcher.v.1.4.R       | Match taxonomic names with WCVP accepted IDs
-WCP_cleanup.R                   | Data cleaning
+0_functions.R                     | Functions called mostly in phylogeny processing and SEM analysis and spatial autocorrelation correction, functions for cleaner structural equation model plots
+1_APG_family_lookup.R             | Adjust family names for APG 4 System [1]
+2_WCP_cleanup.R                   | Data cleaning
+3_match_data.R                    | Get tip label name sources, match NCBI-based tip labels with WCVP accepted taxa IDs
+4_common_format_creator_SB.R      | Builds common format for taxonomic names from GBIF data to feed into the taxonomy matcher
+5_taxonomic_matcher.v.1.4.R       | Match taxonomic names with WCVP accepted IDs
+6_match_data_part2.R              | Match GBIF-based tip labels with WCVP accepted taxa IDs. Replace tip labels with WCVP accepted IDs
+7_add_species_server_version.R    | Adding species taxonomically to a phylogeny
+8_resolve_polytomies.R            | Repeatedly resolve polytomies in phylogeny and record average root distance for each tip
+9_process_geography.R             | Building presence matrix for WCVP accepted taxa in TDWG level 3 units
+10_phylostruct.R                   | Computing mean root distance for TDWG level 3 units
+11_get_climate.R                   | Process climate data
+12_get_soil.R                      | Process soil data
+13_get_topography.R                | Process elevation data for terrain ruggedness index
+14_get_biomes.R                    | Process biome data
+15_assemble_dataset.R              | Assemble final data set (environmental, evolutionary and species richness data)
+16_data_prep_and_checks.R          | Get correlations, variable importance analysis, distribution + transformation where necessary, multicolinearity tests, scaling data
+17_mod_selection_SEM.R             | Building Structural Equation Models with possible variable combinations, collecting models stats
+18_mod_selection_SEM_analysis.R    | Get stats from model selection, manual model adjustments
+19_sem_results_further_analysis.R  | Loads the final SEM, spatial autocorrelation analysis, figures and maps 
 
-[3] APG IV. An update of the Angiosperm Phylogeny Group classification for the orders and families of flowering plants: APG IV. Botanical Journal of the Linnean Society, 2016, 181, 1–20.
+
+[1] APG IV. An update of the Angiosperm Phylogeny Group classification for the orders and families of flowering plants: APG IV. Botanical Journal of the Linnean Society, 2016, 181, 1–20.
 
 ### Reproducibility and completeness
 Please note that for the sake of reproducibility, we include *all* scripts. That includes also scripts processing large primary data files which are not included in the supplement for size reasons (i.e. CRU TS, wordclim, soil). The processed data are included however. To repeat these steps, the necessary data can be obtained as free downloads (link in description part).
