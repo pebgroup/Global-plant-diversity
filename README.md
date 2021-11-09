@@ -101,7 +101,7 @@ fin.rds			                | Tip labels in ALLMB.tre
 allmb_matched_clean.tre	    | Phylogeny with original tip labels replaced with WCVP unique IDs
 level3_mod.shp              | Shapefile with polygons for all 369 TDWG level 3 units and buffer around small islands
 allmb_matched_added_species_clean.tre | Phylogeny used in analysis with WCVP tip labels and taxonomically added species
-comm_April2021.rds		      | Community matrix containing World Checklist of Vascular Plants taxon presence data in botanical countries, using WCVP unique IDs
+comm_September2021.rds		      | Community matrix containing World Checklist of Vascular Plants taxon presence data in botanical countries, using WCVP unique IDs
 polytomie_RD_results_Sep21.rds | Mean root distances for each taxon
 mrd_Sep2021.rds		          | Mean root distances for each TDWG level 3 unit
 soil.rds 			              | Number of soil types per TDWG level 3 unit
