@@ -17,6 +17,7 @@
 *.sh
 .Rproj.user/
 data/
+data/cru/
 processed_data/
 figures/
 soil_SR_vs_MRD.R
