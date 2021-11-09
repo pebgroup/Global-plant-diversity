@@ -1,12 +1,29 @@
-# Global plant diversity project
+# Drivers of global plant diversity
 
 ## About
 
-We integrate a recent compilation of global species richness on the botanical country level with novel estimates of diversification rate and environmental variables, to analyse how their interaction shapes today’s global species richness distribution. All scripts to run this analysis are stored in this repository.
+We integrate a recent compilation of global species richness on the botanical
+country level with novel estimates of diversification rate and environmental
+variables, to analyse how their interactions shape today’s global species
+richness distribution. All scripts to run this analysis are stored in this
+repository.
+
+### Reproducibility and data
+We provide here a final dataset (_processed_data/shp_object_fin_analysis.RDS_)
+which contains measures on the botanical country level for species richness,
+diversification rates and environmental variables, as well as scripts to process
+figures, the SEM and to build this data set.
+
+While all files used and produced throughout each step are described here, the
+source data needs to be downloaded (e.g. CRU TS, wordclim, soil data, WCVP) from
+the respective sources. Version number and information how to obtain data is
+listed in the description part below.
 
 ## Scripts
 
-Scripts are stored in *scripts* folder and accessed through *master_analysis.R*, which sources all other scripts. The header in the master script contains system requirements and execution time information.
+Scripts are accessed through *master_analysis.R*, which sources all other
+scripts. The header in the master script contains system requirements and
+execution time information.
 
 Script                          | Job
 --------------------------------|--------------------------------------------------------------------------
@@ -32,16 +49,18 @@ Script                          | Job
 19_sem_results_further_analysis.R  | Loads the final SEM, spatial autocorrelation analysis, figures and maps 
 
 
-[1] APG IV. An update of the Angiosperm Phylogeny Group classification for the orders and families of flowering plants: APG IV. Botanical Journal of the Linnean Society, 2016, 181, 1–20.
-
-### Reproducibility and completeness
-Please note that for the sake of reproducibility, we include *all* scripts. That includes also scripts processing large primary data files which are not included in the supplement for size reasons (i.e. CRU TS, wordclim, soil). The processed data are included however. To repeat these steps, the necessary data can be obtained as free downloads (link in description part).
+[1] APG IV. An update of the Angiosperm Phylogeny Group classification for the
+orders and families of flowering plants: APG IV. Botanical Journal of the
+Linnean Society, 2016, 181, 1–20.
 
 
 ## Data
-Primary data are files obtained online / from collaborators. Processed data are files which are produced during the analysis steps and stored to shorten execution time for later analysis steps and to keep work space small.
+Primary data includes files obtained online / from collaborators. Processed data
+are files which are produced during the analysis steps and stored to shorten
+execution time for following analysis steps.
 
-Large data files that can be freely accessed online (i.e. CRU TS, WordClim) are not part of the supplement but listed with version number and information how to obtain them.
+Data set in the process of publication and therefore not provided as raw data:
+_checklist_distribution.txt_
 
 
 ### Primary data
@@ -49,7 +68,7 @@ Large data files that can be freely accessed online (i.e. CRU TS, WordClim) are 
 File                        | Description
 ---------------------------- | --------------------------------------------------------------------------
 checklist_names.txt         | Text file containing World Checklist of Vascular Plants taxonomy, taxon status, unique ID and synonyms
-checklist_distribution.txt  | Text file containing World Checklist of Vascular Plants taxon presence data in botanical countries
+checklist_distribution.txt  | Text file containing World Checklist of Vascular Plants taxon presence data in botanical countries, provided by collaborators (publication in prep)
 ALLMB.tre		                | Phylogeny with GenBank and Open Tree of Life taxa with a backbone provided by Magallón et al. (2015). From Smith & Brown 2018
 GBMB.tre			              | Phylogeny with GenBank taxa with a backbone provided by Magallón et al. (2015). From Smith & Brown 2018. Used to identify taxa with molecular information
 ott.rds                     | Open Tree of Life taxonomy file (.rds version of taxonomy.tsv, Version: 3.0. Available on https://tree.opentreeoflife.org/about/taxonomy-version/ott3.0). Used to identify source for tip label name (NCBI or GBIF)
@@ -70,12 +89,12 @@ cru_ts4.04.1901.2019.pre.dat.nc | see above
 
 
 ### Processed data
-Includes intermediate results built during analysis, allowing processing of later steps without starting from scretch.
+Files built during analysis.
 
 File                        | Description
 ---------------------------- | --------------------------------------------------------------------------
-apg_wcp_jun_20.rds          | .rds file version of checklist_names.txt file for faster loading 
-apg_wcp_jun_20_clean.rds	  | World Checklist of Vascular Plants taxonomy working file. Cleaned and family names adjusted for the latest accepted version based on the APG IV (2016) system
+apg_wcp_jun_21.rds          | .rds file version of checklist_names.txt file for faster loading 
+apg_wcp_jun_21_clean.rds	  | World Checklist of Vascular Plants taxonomy working file. Cleaned and family names adjusted for the latest accepted version based on the APG IV (2016) system
 SB_tip_labels.rds		        | Non-NCBI based tip labels in ALLMB.tre
 fin_species_match_GBIF.rds	|  List with taxonomy matching results for GBIF phylogeny tip labels with WCVP IDs
 fin.rds			                | Tip labels in ALLMB.tre
@@ -83,8 +102,8 @@ allmb_matched_clean.tre	    | Phylogeny with original tip labels replaced with W
 level3_mod.shp              | Shapefile with polygons for all 369 TDWG level 3 units and buffer around small islands
 allmb_matched_added_species_clean.tre | Phylogeny used in analysis with WCVP tip labels and taxonomically added species
 comm_April2021.rds		      | Community matrix containing World Checklist of Vascular Plants taxon presence data in botanical countries, using WCVP unique IDs
-polytomie_RD_results_Apr21.rds | Mean root distances for each taxon
-mrd_Apr2021.rds		          | Mean root distances for each TDWG level 3 unit
+polytomie_RD_results_Sep21.rds | Mean root distances for each taxon
+mrd_Sep2021.rds		          | Mean root distances for each TDWG level 3 unit
 soil.rds 			              | Number of soil types per TDWG level 3 unit
 topography.rds			        | Terrain ruggedness index for each TDWG level 3 unit
 biomes_olson.rds		        | Biome types for each TDWG level 3 unit
@@ -92,7 +111,7 @@ climate.rds			            | Mean and standard deviations of climatic variables f
 cru/.*                      | Processed CRU climate data
 shp_object_fin_analysis.RDS	| Assembled dataset incl. species richness, mean root distance, environmental variables
 sem_input_data.rds		      | Final dataset without incomplete cases
-mod_selection_Apr2021.RData	| A list called "temp" with model selection results and stats from each 1046429 model runs 
+mod_selection_Sep2021.RData	| A list called "temp" with model selection results and stats from each 1046429 model runs 
 all_models.RData		        | Processed model selection results and best models
 best_model.RData		        | final structural equation model lavaan object
 
