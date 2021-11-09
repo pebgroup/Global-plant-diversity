@@ -63,7 +63,7 @@ library(spatialEco)
 library(spdep)
 library(stringr)
 library(tidyr)
-library(gbif)
+library(rgbif)
 library(writexl) # to export model results as table 
 
 

@@ -813,6 +813,3 @@ ggsave("figures/lat_patterns_robustness.png", width=6, height=4.5)
 
 
 
-
-
-
