@@ -227,9 +227,92 @@ names(res) <- temp
 
 # Paleoclimate ------------------------------------------------------------
 
-rasta <- stack("data/paleoclim/MioMIP1.nc")
-# first_layer <- grep("1979", names(rasta))[1]
-# last_layer <- grep("2018", names(rasta))[length(grep("2018", names(rasta)))]
-rasta <- subset(rasta, seq(first_layer, last_layer))
+# # 2021 (MAT only: 10.5281/zenodo.4568897)
+# # No anomalies calculated yet.. so this is paleogeography
+# rasta <- stack("data/paleoclim/MioMIP1.nc")
+# names(rasta)[grep("Mid.Mio", names(rasta))]
+# # first_layer <- grep("1979", names(rasta))[1]
+# # last_layer <- grep("2018", names(rasta))[length(grep("2018", names(rasta)))]
+# rasta.mio <- subset(rasta, names(rasta)[grep("Mid.Mio", names(rasta))])
+# plot(rasta.mio)
+
+
+# Bradshaw 2012 (https://doi.org/10.5194/cp-8-1257-2012)
+#summary and anomalies on website:
+#https://www.paleo.bristol.ac.uk/ummodel/data/tczth/standard_html/tczth.html
+#download nc data here: https://www.paleo.bristol.ac.uk/cgi-bin/Page_new2.cgi #
+#select experiment and present day standard to compare with
+mio_pet_ano <- stack("data/paleoclim/tczth-tcztg_precip_ann_fsy1.nc")
+#plot(pMAP_ano)
+
+mio_mat_ano <- stack("data/paleoclim/tczth-tcztg_mat_ann_fsy1.nc")
+#plot(pMAT_ano)
+
+# stack them
+pclimate_vars <- c("mio_pet_ano", "mio_mat_ano")
+pstat_vars <- c("mean", "sd", "n")
+combs <- nrow(expand.grid(pclimate_vars, pstat_vars))
+m <- matrix(seq(1:combs), ncol=3, byrow = TRUE)
+num_list <- split(m, rep(1:nrow(m)))
+
+pres <- matrix(nrow=nrow(shape@data), ncol=combs)
+rownames(pres) <- shape@data$LEVEL_3_CO
+disag_id <- c()
+upsale_count <- c()
+
+# match projections
+proj4string(mio_pet_ano) <- proj4string(shape)
+proj4string(mio_mat_ano) <- proj4string(shape)
+
+# match coordinates
+bbox(mio_pet_ano)
+bbox(shape)
+apply(coordinates(mio_pet_ano), 2, range)
+# 3.75 longitudes missing?
+unique(coordinates(mio_pet_ano)[,1]) #  no, diff steps: 96 lng steps
+unique(coordinates(mio_pet_ano)[,2])
+#coordinates(mio_pet_ano)[,1] <- coordinates(mio_pet_ano)[,1]-180
+extent(mio_pet_ano) # larger extent since pixel size 3.75 for lng + 1.5 for lat
+# change coordinates
+bb <- extent(-181.875, 181.875, -91.25, 91.25)
+extent(mio_pet_ano) <- bb
+extent(mio_mat_ano) <- bb
+
+Sys.time()
+for(i in 1:nrow(shape@data)){
+  # loop over botanical countries
+  shape_sub <- subset(shape, shape$LEVEL_3_CO==shape$LEVEL_3_CO[[i]])
+  for(j in 1:length(pclimate_vars)){
+    # loop over each climate layer
+    lay <- get(pclimate_vars[j])
+    rest <- raster::extract(lay, shape_sub)
+    rest <- na.omit(rest[[1]])
+    # increase resolution necessary?
+    if(all(is.na(rest))==TRUE){
+      print("disaggregate to increase resolution")
+      #disag <- c(disag, 1)
+      upsale_count <- c(upsale_count, 1)
+      disag_id <- c(disag_id, paste(i,j))
+      # to avoid huge raster files crop to extent of shapefile sub * 20
+      newExtent <- extent(bbox(shape_sub))
+      lay2 <- crop(lay, newExtent*20)
+      lay2 <- disaggregate(lay2, 10)
+      rest <- raster::extract(lay2, shape_sub)
+      rest <- na.omit(rest[[1]])
+      
+    }else{}
+    
+    # get mean and sd
+    pres[i,num_list[[j]][1]] <- mean(rest)
+    # set SD to zero for n=1 cases?
+    #ifelse(is.na(sd(rest))==TRUE, stdiv <- 0, stdiv <- sd(rest))
+    #res[i,num_list[[j]][2]] <- stdiv
+    pres[i,num_list[[j]][2]] <- sd(rest)
+    # sample size
+    pres[i,num_list[[j]][3]] <- length(rest)
+  }
+  if(!i%%1)cat(i,"\r")
+}
+Sys.time()
 
 
