@@ -74,7 +74,7 @@ rasta <- subset(rasta, seq(first_layer, last_layer))
 # MAT
 # The average of averages is equal to the average of all values if the number of elements of all groups is the same: just take average
 annual_average_temp <- calc(rasta, mean)
-writeRaster(annual_average_temp, "processed_data/cru/annual_average_temp.grd" ,overwrite=TRUE)
+writeRaster(annual_average_temp, "processed_data/cru/annual_average_temp.grd", overwrite=TRUE)
 rm(annual_average_temp)
 
 # temperature annual range (maximum temperature of warmest month minus minimum temperature of coldest month)
@@ -225,5 +225,11 @@ names(res) <- temp
 
 
 
+# Paleoclimate ------------------------------------------------------------
+
+rasta <- stack("data/paleoclim/MioMIP1.nc")
+# first_layer <- grep("1979", names(rasta))[1]
+# last_layer <- grep("2018", names(rasta))[length(grep("2018", names(rasta)))]
+rasta <- subset(rasta, seq(first_layer, last_layer))
 
 
