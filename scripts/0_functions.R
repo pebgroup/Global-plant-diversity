@@ -124,9 +124,9 @@ root.distance <- function(tree, mc.cores=8){
 # function that modifies corrplot from ggcorrplot package
 # to allow for visual highlighting of values above a certain thereshold
 # adjusting corrplot function to highlight correlations higher lower than threshold
-my_corrplot <- function (corr, method = c("square", "circle"), type = c("full", "lower", "upper"), 
+my.corrplot <- function (corr, method = c("square", "circle"), type = c("full", "lower", "upper"), 
                          ggtheme = ggplot2::theme_minimal, title = "", 
-                         show.legend = TRUE, legend.title = "rho", show.diag = FALSE, 
+                         show.legend = TRUE, legend.title = "Pearson's r", show.diag = FALSE, 
                          colors = c("blue", "white", "red"), outline.color = "gray", 
                          hc.order = FALSE, hc.method = "complete", lab = FALSE, lab_col = "black", 
                          lab_size = 4, p.mat = NULL, sig.level = 0.05, insig = c("pch", "blank"), 
@@ -210,11 +210,13 @@ my_corrplot <- function (corr, method = c("square", "circle"), type = c("full", 
       nh <- abs(corr$value) >= highthreshold
       typo <- c(1, 2)[as.numeric(nh)+1]
       #   p <- p + ggplot2::aes_string(face = typo)
-      p <- p + ggplot2::geom_text(mapping = ggplot2::aes_string(x = "Var1", 
-                                                                y = "Var2", fontface=typo), label = label, color = lab_col, size = lab_size)
+      label <- gsub("0\\.", "\\.", label)
+      p <- p + ggplot2::geom_text(
+        mapping = ggplot2::aes_string(x = "Var1", y = "Var2", fontface=typo), 
+        label = label, color = lab_col, size = lab_size)
     }else
-      p <- p + ggplot2::geom_text(mapping = ggplot2::aes_string(x = "Var1", 
-                                                                y = "Var2"), label = label, color = lab_col, size = lab_size)
+      p <- p + ggplot2::geom_text(
+        mapping = ggplot2::aes_string(x = "Var1", y = "Var2"), label = label, color = lab_col, size = lab_size)
   }
   
   if (!is.null(p.mat) & insig == "pch") {
@@ -230,7 +232,7 @@ my_corrplot <- function (corr, method = c("square", "circle"), type = c("full", 
   p <- p + .no_panel()
   p
 }
-environment(my_corrplot) <- asNamespace('ggcorrplot')
+environment(my.corrplot) <- asNamespace('ggcorrplot')
 
 
 
