@@ -47,21 +47,3 @@ MRD.sd <- unlist(mclapply(1:nrow(comm), mrd.sd, phylo=phylo, RD.sd=RD.sd, mc.cor
 Sys.time()
 
 mrd.res <- data.frame(level3=rownames(comm), mrd=MRD, mrd_sd=MRD.sd)
-
-
-# 
-# # calculate randomized MRDs 
-# 
-# Sys.time()
-# for(i in 1:99){
-#   phylo.rnd <- phylo
-#   phylo.rnd$tip.label <- sample(phylo.rnd$tip.label)
-#   MRD <- cbind(MRD, unlist(mclapply(1:nrow(comm), mrd, phylo=phylo.rnd, RD=RD, mc.cores = n_cores)))
-#   cat(paste("replicate", i, "finished"),"\r")
-# }
-# Sys.time()
-# 
-# colnames(MRD) <- c("obs", paste("rnd.", 1:99, sep=""))
-# rownames(MRD) <- rownames(comm)
-
-
