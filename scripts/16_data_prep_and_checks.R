@@ -1,18 +1,24 @@
 # Data prep for SEM
 # produces data_for_SEM.rds
+# variable importance, correlations, scaling and variable distributions
 
+
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str()))  
 library(sf)
 library(ggcorrplot)
 library(caret)
 library(gbm)
 library(cowplot)
 library(ggplot2)
+theme_set(theme_bw())
 library(data.table)
 library(parallel)
-theme_set(theme_bw())
+library(modEvA)
+library(fitdistrplus)
 source("0_functions.R")
 
-rm(list = setdiff(ls(), lsf.str()))  
 shp <- readRDS("../processed_data/shp_object_fin_analysis.RDS")
 
 
@@ -25,6 +31,22 @@ org <- st_drop_geometry(shp)
 rownames(org) <- org$LEVEL_3_CO
 dat <- org[,-grep("_n|mangroves|flooded|LEVEL_3_CO|ID|LEVEL_NAME|REGION_NAM|CONTINENT",
                   names(org))]
+
+# data check
+kruskal.test(dat$sr, is.na(dat$can_height))
+tapply(dat$sr, is.na(dat$can_height), mean)
+kruskal.test(dat$mrd, is.na(dat$can_height))
+tapply(dat$mrd, is.na(dat$can_height), mean, na.rm=TRUE)
+cor.test(dat$sr, dat$can_height)
+cor.test(dat$sr, dat$sub_trop_mbf)
+cor.test(dat$mrd, dat$sub_trop_mbf)
+cor.test(dat$mrd, dat$can_height)
+# no data above 52 degrees north, extrapolated data not avail., removes too many
+# botanical countries (non randomly), same effects as biomes
+dat <- dat[,-grep("can_height|can_range", names(dat))]
+# drop from spatial object too
+shp <- shp[,-grep("can_height|can_range", names(shp))]
+saveRDS(shp, "../processed_data/shp_object_fin_analysis.RDS")
 
 
 dat_no.na <- na.omit(dat)
@@ -47,24 +69,25 @@ my.corrplot(cor.dat_no.na, lab=F, p.mat = p.dat_no.na, insig = "blank",
         plot.margin = margin(0, 0, 0, 0, "cm"),
         panel.grid = element_blank(),
         legend.position = c(.15, .8), legend.text.align = 1)
-ggsave("../figures/correlation_2022.png", width=7, height=6, units = "in", dpi = 600, bg = "white")
+#ggsave("../figures/correlation_2022.png", width=7, height=6, units = "in", dpi = 600, bg = "white")
 
 
 
 
 # Multicollinearity ########################################################
 # check potential full regressions for multicollinearity
-temp <- dat_no.na[,!grepl("sr$|deserts_x_shrub|medit_fws|temp_cf|
-                          sub_trop_cf|sub_trop_gss|temp_gss|boreal|tundra", names(dat_no.na))]
-lm_sr <- lm(sr_trans ~ . , data=temp)
+names(dat_no.na) <- sub("_mean$", "_m", names(dat_no.na)) # shorten mean to _m
+temp <- dat_no.na[,!grepl("deserts_x_shrub|medit_fws|temp_cf|
+                          sub_trop_cf|sub_trop_gss|temp_gss|boreal|tundra|level3", names(dat_no.na))]
+lm_sr <- lm(sr ~ . , data=temp)
 sort(car::vif(lm_sr))
 
-# check out mat_m and pet_m
-lm_sr1 <- lm(sr_trans ~ . -mat_m, data=temp)
+# check out mat and pet
+lm_sr1 <- lm(sr ~ . -mat_m, data=temp)
 sort(car::vif(lm_sr1))
-lm_sr2 <- lm(sr_trans ~ . -pet_m, data=temp)
+lm_sr2 <- lm(sr ~ . -pet_m, data=temp)
 sort(car::vif(lm_sr2))
-lm_sr3 <- lm(sr_trans ~ . -mat_m -pre_lgm_ano_m, data=temp)
+lm_sr3 <- lm(sr ~ . -mat_m -pre_lgm_ano_m, data=temp)
 sort(car::vif(lm_sr3))
 
 summary(lm_sr)
@@ -73,28 +96,28 @@ summary(lm_sr2)
 summary(lm_sr3)
 # removing mat_m is more efficient in reducing VIFs, removing pet_m leaves more explanatory power.
 # If necessary, remove pet_m before mat_m
-# After removing either pet or mat, precipitation LGM anomaly stays a problem. Removing solves this.
+# After removing either pet, precipitation LGM anomaly stays a problem. Removing solves this.
 
 
 
 
-lm_mrd <- lm(mrd ~ . -sr_trans, data=temp)
+lm_mrd <- lm(mrd ~ . -sr, data=temp)
 sort(car::vif(lm_mrd))
 
 # check out mat_m and pet_m
-lm_mrd1 <- lm(mrd ~ . -sr_trans -mat_m, data=temp)
+lm_mrd1 <- lm(mrd ~ . -sr -mat_m, data=temp)
 sort(car::vif(lm_mrd1))
-lm_mrd2 <- lm(mrd ~ . -sr_trans -pet_m, data=temp)
+lm_mrd2 <- lm(mrd ~ . -sr -pet_m, data=temp)
 sort(car::vif(lm_mrd2))
 summary(lm_mrd)$r.squared
 summary(lm_mrd1)$r.squared
 summary(lm_mrd2)$r.squared
 # removing mat_m is more efficient in reducing VIFs, removing pet_m leaves slightly less explanatory power.
 # No preference. See which one performs better, avoid having both in same regression
-# pre_lgm_ano_m sis a problem here too
+# pre_lgm_ano_m shows colinearity, remove (same as above)
 
 
-lm_mdr <- lm(mdr ~ . -sr_trans, data=temp)
+lm_mdr <- lm(mdr ~ . -sr, data=temp)
 sort(car::vif(lm_mdr))
 # same dynamic as for MRD
 
@@ -113,53 +136,53 @@ dat_no.na <- dat_no.na[,-grep("pre_lgm|pet",
 dat_no.na <- na.omit(dat_no.na)
 dat_no.na$level3 <- row.names(dat_no.na)
 dim(dat_no.na)
+saveRDS(dat_no.na, "../processed_data/gbm/data_for_SEM.rds")
 
 
 #### GBM CONTROLS #############################################################
+# use the bash scripts for this part
 
-# parameter tuning using caret
-gbmControl <- trainControl(method = "repeatedcv", number = 10,
-                           repeats = 3, savePredictions = "final",
-                           returnResamp ="final")
-
-gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3), 
-                        n.trees = (1:10)*50, 
-                        shrinkage = c(0.1, 0.01, 0.001),
-                        n.minobsinnode = c(5, 10, 15))
-
-
-
-# SR ----------------------------------------------------------------------
-
-# define function
-run.gbm <- function(i, seeds, data, trControl=gbmControl,
-                    tuneGrid=gbmGrid){
-  set.seed(s[i]) 
-  if(!i%%1)cat(i,"\r")
-  gbm_temp <- train(sr ~ ., data, method = "gbm", 
-                  trControl = gbmControl, verbose=FALSE,
-                  tuneGrid = gbmGrid)
-  temp <- list(summary(gbm_temp)$var[1:16], s[i])
-  return(temp)
-}
-
-n_cores=4
-s <- seq(540,645,1)
-system.time(
-  sr_list <- mclapply(1:length(s), seeds = s, run.gbm,
-                      data = dat_no.na[,-grep("level3", names(dat_no.na))],
-                      #response=sr,
-                      mc.cores=n_cores)
-)
-#saveRDS(sr_list, "sr_list100_lgm.rds")
-#saveRDS(sr_list, "sr_list100.rds")
+# # parameter tuning using caret
+# gbmControl <- trainControl(method = "repeatedcv", number = 10,
+#                            repeats = 3, savePredictions = "final",
+#                            returnResamp ="final")
+# 
+# gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3), 
+#                         n.trees = (1:10)*50, 
+#                         shrinkage = c(0.1, 0.01, 0.001),
+#                         n.minobsinnode = c(5, 10, 15))
+# 
+# 
+# 
+# # SR ----------------------------------------------------------------------
+# 
+# # define function
+# run.gbm <- function(i, seeds, data, trControl=gbmControl,
+#                     tuneGrid=gbmGrid){
+#   set.seed(s[i]) 
+#   if(!i%%1)cat(i,"\r")
+#   gbm_temp <- train(sr ~ ., data, method = "gbm", 
+#                   trControl = gbmControl, verbose=FALSE,
+#                   tuneGrid = gbmGrid)
+#   temp <- list(summary(gbm_temp)$var[1:16], s[i])
+#   return(temp)
+# }
+# 
+# n_cores=4
+# s <- seq(540,645,1)
+# system.time(
+#   sr_list <- mclapply(1:length(s), seeds = s, run.gbm,
+#                       data = dat_no.na[,-grep("level3", names(dat_no.na))],
+#                       #response=sr,
+#                       mc.cores=n_cores)
+# )
+# #saveRDS(sr_list, "../processed_data/sr_list100_lgm.rds")
 
 # check
-#sr_list <- readRDS("sr_list100_lgm.rds")
 filnames <- dir("../processed_data/gbm", full.names = T)
 filnames <- filnames[grep("sr_list100_lgm5", filnames)]
 length(filnames)
-sr_list <- sapply(filnames, readRDS, simplify = F) 
+sr_list <- sapply(filnames, readRDS, simplify = F)
 # combine files
 sr_list <- unlist(sr_list, recursive = F)
 
@@ -171,9 +194,7 @@ ggplot(eq, aes(value))+
   facet_wrap(~Var2, scales = "free")+
   theme(axis.text.x = element_text(size=6, angle = 45, hjust=1),
         strip.background = element_blank())
-#ggplot(eq, aes(x=Var2, group=value, fill=value))+
-#  geom_bar(position = "fill")
-ggsave("../figures/varImp_SR_gbm100_runs.png", width=7, height=7, units = "in", dpi = 600)
+#ggsave("../figures/varImp_SR_gbm100_runs.png", width=7, height=7, units = "in", dpi = 600)
 
 eqr <-tapply(eq$value, eq$Var2, function(x){names(sort(table(x), decreasing = T))})
 fin_sr <- sort(tapply(eq$Var2, eq$value, function(x){sum(x)/length(x)}), decreasing=F)
@@ -192,27 +213,26 @@ tot.position.sr <- ggplot(fin_sr[c((nrow(fin_sr)-30):nrow(fin_sr)),], aes(y=vari
 
 # MRD ---------------------------------------------------------------------
 
-# redefine function for MRD
-run.gbm <- function(i, seeds, data, trControl=gbmControl,
-                    tuneGrid=gbmGrid){
-  set.seed(s[i]) 
-  if(!i%%1)cat(i,"\r")
-  gbm_temp <- train(mrd ~ ., data, method = "gbm", 
-                    trControl = gbmControl, verbose=FALSE,
-                    tuneGrid = gbmGrid)
-  temp <- list(summary(gbm_temp)$var[1:16], s[i])
-  return(temp)
-}
-
-n_cores=4
-s <- seq(670,770,1)
-system.time(
-  mrd_list <- mclapply(1:length(s), seeds = s, run.gbm,
-                       data = dat_no.na[,-grep("sr|level3|mdr",names(dat_no.na))],
-                       mc.cores=n_cores)
-)
-saveRDS(mrd_list, "mrd_list100_lgm.rds")
-#saveRDS(mrd_list, "mrd_list100.rds")
+# # redefine function for MRD
+# run.gbm <- function(i, seeds, data, trControl=gbmControl,
+#                     tuneGrid=gbmGrid){
+#   set.seed(s[i]) 
+#   if(!i%%1)cat(i,"\r")
+#   gbm_temp <- train(mrd ~ ., data, method = "gbm", 
+#                     trControl = gbmControl, verbose=FALSE,
+#                     tuneGrid = gbmGrid)
+#   temp <- list(summary(gbm_temp)$var[1:16], s[i])
+#   return(temp)
+# }
+# 
+# n_cores=4
+# s <- seq(670,770,1)
+# system.time(
+#   mrd_list <- mclapply(1:length(s), seeds = s, run.gbm,
+#                        data = dat_no.na[,-grep("sr|level3|mdr",names(dat_no.na))],
+#                        mc.cores=n_cores)
+# )
+#saveRDS(mrd_list, "mrd_list100_lgm.rds")
 
 # check
 #mrd_list <- readRDS("mrd_list100_lgm.rds")
@@ -232,7 +252,7 @@ ggplot(eq, aes(value))+
         strip.background = element_blank())
 #ggplot(eq, aes(x=Var2, group=value, fill=value))+
 #  geom_bar(position = "fill")
-ggsave("../figures/varImp_MRD_gbm100_runs.png", width=7, height=7, units = "in", dpi = 600)
+#ggsave("../figures/varImp_MRD_gbm100_runs.png", width=7, height=7, units = "in", dpi = 600)
 
 eqr <-tapply(eq$value, eq$Var2, function(x){names(sort(table(x), decreasing = T))})
 fin_mrd <- sort(tapply(eq$Var2, eq$value, function(x){sum(x)/length(x)}), decreasing=F)
@@ -253,25 +273,25 @@ plot_grid(tot.position.sr, tot.position.mrd, ncol=2, labels = c("SR", "MRD"))
 
 # DivRate -----------------------------------------------------------------
 
-# redefine function for MDR
-run.gbm <- function(i, seeds, data, trControl=gbmControl,
-                    tuneGrid=gbmGrid){
-  set.seed(s[i]) 
-  if(!i%%1)cat(i,"\r")
-  gbm_temp <- train(mdr ~ ., data, method = "gbm", 
-                    trControl = gbmControl, verbose=FALSE,
-                    tuneGrid = gbmGrid)
-  temp <- list(summary(gbm_temp)$var[1:16], s[i])
-  return(temp)
-}
-
-n_cores=4
-s <- seq(770,870,1)
-system.time(
-  mdr_list <- mclapply(1:length(s), seeds = s, run.gbm,
-                       data = dat_no.na[,-grep("sr|level3|mrd",names(dat_no.na))],
-                       mc.cores=n_cores)
-)
+# # redefine function for MDR
+# run.gbm <- function(i, seeds, data, trControl=gbmControl,
+#                     tuneGrid=gbmGrid){
+#   set.seed(s[i]) 
+#   if(!i%%1)cat(i,"\r")
+#   gbm_temp <- train(mdr ~ ., data, method = "gbm", 
+#                     trControl = gbmControl, verbose=FALSE,
+#                     tuneGrid = gbmGrid)
+#   temp <- list(summary(gbm_temp)$var[1:16], s[i])
+#   return(temp)
+# }
+# 
+# n_cores=4
+# s <- seq(770,870,1)
+# system.time(
+#   mdr_list <- mclapply(1:length(s), seeds = s, run.gbm,
+#                        data = dat_no.na[,-grep("sr|level3|mrd",names(dat_no.na))],
+#                        mc.cores=n_cores)
+# )
 #saveRDS(mdr_list, "mdr_list100.rds")
 
 # check
@@ -314,29 +334,25 @@ temp <- plot_grid(ncol = 3,
           tot.position.sr, tot.position.mrd, tot.position.mdr)
 ggdraw(add_sub(temp, "Average variable position", vpadding=grid::unit(0.5,"lines"),y=3, x=0.5, vjust=4.5, 
                size = 11))
-ggsave("../figures/total_var_position_GBM.png", width=7, height=5, units = "in", dpi = 600, bg = "white")
+#ggsave("../figures/total_var_position_GBM.png", width=7, height=5, units = "in", dpi = 600, bg = "white")
 
 
 
 selected_variables <- list(fin_sr, fin_mrd, fin_mdr)
-saveRDS(selected_variables, "../processed_data/selected_variables.rds")
-saveRDS(dat_no.na, "../processed_data/data_for_SEM.rds")
+saveRDS(selected_variables, "../processed_data/sem/selected_variables.rds")
 
 
 
 
 
 
-# load data ##################################################################
+# clear workspace
 rm(list=ls())
-library(modEvA)
-library(fitdistrplus)
 
 dat_no.na <-  readRDS("../processed_data/data_for_SEM.rds")
-names(dat_no.na) <- sub("_mean$", "_m", names(dat_no.na)) # shorten mean to _m
 
 
-# test distribution of potential response variables ############################################################
+# test distribution of potential response variables ##########################
 ## distributions SR and MRD 
 # sqrt transform species richness for better normal distribution
 dat_no.na$sr_trans <- sqrt(dat_no.na$sr)
@@ -347,7 +363,7 @@ hist(dat_no.na$sr_trans)
 hist(dat_no.na$mrd)
 hist(dat_no.na$mdr)
 
-# mrd seems normally distributed. Lets test:
+# mrd seems normally distributed. Lets check:
 descdist(dat_no.na$mrd, discrete = FALSE, boot=500)
 shapiro.test(dat_no.na$mrd) # almost normal distribution
 mrd_norm_fit <- fitdist(dat_no.na$mrd, "norm",method="mle")
@@ -431,7 +447,7 @@ dat_no.na <- dat_no.na[,-grep("level3",names(dat_no.na))]
 dat_no.na <- apply(dat_no.na, 2, ztrans)
 dat_no.na <- as.data.frame(dat_no.na)
 
-saveRDS(dat_no.na, "../processed_data/sem_input_data.rds")
+saveRDS(dat_no.na, "../processed_data/sem/sem_input_data.rds")
 # feed this into model selection
 
 
