@@ -18,7 +18,7 @@
 *.docx
 *.pdf
 *.RDataTmp
-*.sh
+
 .Rproj.user/
 data/
 #processed_data/
