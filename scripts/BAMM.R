@@ -1,1 +1,0 @@
-# BAMM output
