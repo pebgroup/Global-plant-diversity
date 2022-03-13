@@ -31,7 +31,9 @@
 # including inaccurate values as there are not other values around islands.
 
 
-
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str())) 
 library(raster)
 library(rgdal)
 
@@ -221,9 +223,7 @@ saveRDS(res, "../processed_data/climate.rds")
 
 # Bradshaw 2012 (https://doi.org/10.5194/cp-8-1257-2012)
 #summary and anomalies on website:
-#https://www.paleo.bristol.ac.uk/ummodel/data/tczth/standard_html/tczth.html
 #download nc data here: https://www.paleo.bristol.ac.uk/ummodel/users/Bradshaw_et_al_2012/new2/ #
-# https://www.paleo.bristol.ac.uk/cgi-bin/Page_new2.cgi
 #select experiment and present day standard to compare with
 
 
