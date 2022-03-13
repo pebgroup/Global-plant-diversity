@@ -62,9 +62,9 @@ Files to make figures and inspect final SEM (scripts 17-19).
 
 File                        | Description
 ---------------------------- | --------------------------------------------------------------------------
-sem_input_data.rds          | Data.frame to feed to the Structural Equation Model selection process
+sem_input_data.RDS          | Data.frame to feed to the Structural Equation Model selection process
 shp_object_fin_analysis.RDS | Spatial object including all data in sem_input_data.rds
-best_model.RData            | Best SEM lavaan model object
+best_model.RDATA            | Best SEM lavaan model object
 
 
 
