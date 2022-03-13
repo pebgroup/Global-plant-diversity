@@ -10,6 +10,14 @@
 ## https://files.isric.org/soilgrids/latest/data/wrb/MostProbable.vrt
 ## vrt for most probable downloaded and translated to geoTiff in QGIS with a lower resolution.
 
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str())) 
+library(raster)
+library(rgdal)
+
+shape <- readOGR("../data/shapefile_bot_countries/level3_mod.shp")
+soil <- raster("../data/soil_raster_layer_000832.tif")
 
 Sys.time()
 number_soils <- c()
@@ -24,4 +32,4 @@ Sys.time()
 
 res <- data.frame(country=shape$LEVEL_3_CO, number_soils)
 
-
+saveRDS(res, file="../processed_data/soil.rds")
