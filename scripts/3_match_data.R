@@ -1,3 +1,14 @@
+# matching tip labels with WCVP IDs, part I
+
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str())) 
+library(phytools)
+
+tax_level <- "elevated_to_species_id" 
+phylo <- read.tree("../data/ALLMB.tre") # phylogeny from Smith&Brown 2018
+ott <- readRDS("../data/ott.rds") # OTL taxonomy to identify tip labels
+matches <- readRDS("../data/fin_species_match_NCBI_wcvp21.rds") # NCBI-WCSP matches from the taxonomy matcher
 
 fin <- data.frame(tips = phylo$tip.label)
 fin$tips_mod <- gsub("_", " ", fin$tips) # replace underscore with space
@@ -60,4 +71,8 @@ fin <- merge(fin, ott_gbif[,c("name", "gbif_id")],
              by.x="tips_mod", by.y="name", all.x=TRUE)
 
 
+# export tip labels that have not been matched with NCBI
+saveRDS(fin[!is.na(fin$gbif_id),], file="../processed_data/SB_tip_labels_21.rds")
+# export all tip labels with source
+saveRDS(fin, file="../processed_data/fin.rds")
 

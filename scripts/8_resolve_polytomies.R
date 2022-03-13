@@ -1,5 +1,19 @@
 # Resolve polytomies
 
+
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str())) 
+library(phytools)
+library(parallel)
+library(castor)
+n_cores = 16
+reps <- 1000
+
+
+phylo <- read.tree("../processed_data/allmb_matched_added_species_Sep21_clean.tre")
+
+
 ## GO
 # increase numbers when ready to go    
 res <- matrix(ncol=length(phylo$tip.label), nrow=reps)
@@ -24,5 +38,6 @@ res <- data.frame(mean.rd = colMeans(output),
                   range = as.numeric(diff(apply(output, 2, range)))
                   )
 
-
+saveRDS(res, "../processed_data/polytomie_RD_results_Sep21_2.rds")
+#saveRDS(res, "processed_data/polytomie_RD_results.rds")
 

@@ -1,5 +1,18 @@
 # process geography
 
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str())) 
+library(ape)
+library(rgdal)
+library(data.table)
+
+phylo <- read.tree("../processed_data/allmb_matched_added_species_Sep21_clean.tre") 
+wcp <- readRDS("../processed_data/apg_wcp_jul_21_clean.rds")
+shape <- readOGR("../data/shapefile_bot_countries/level3.shp")
+dist <- fread("../data/WCVP/world_checklist_names_and_distribution_JUL_21/checklist_distribution.txt")
+
+
 dist = dist[dist$introduced==0,] #remove introduced and extinct records
 dist$area_code_l3 = toupper(dist$area_code_l3)
 
@@ -46,7 +59,7 @@ for(i in 1:nrow(dist)){
 rm(i)
 Sys.time()
 
-
+saveRDS(comm, file="../processed_data/comm_September2021.rds")
 
 
 

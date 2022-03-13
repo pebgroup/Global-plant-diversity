@@ -1,4 +1,16 @@
-## Load taxonomy matcher created GBIF tip labels #################################################### 
+# matching tip labels with WCVP IDs, part II
+
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str()))
+library(phytools)
+
+matches <- readRDS("../processed_data/fin_species_match_GBIF.rds")
+fin <- readRDS("../processed_data/fin.rds")
+phylo <- read.tree("../data/ALLMB.tre") # phylogeny
+tax_level <- "elevated_to_species_id" 
+phylogb_a <- read.tree("../data/GBMB.tre") # genbank tree to identify tips with molecular data
+wcp <- readRDS("../processed_data/apg_wcp_jul_21_clean.rds")
 
 matches$elevated_to_species_id[which(is.na(matches$elevated_to_species_id))] <- matches$accepted_plant_name_id[which(is.na(matches$elevated_to_species_id))]
 matches <- matches[,c(tax_level, "tip")]
@@ -13,7 +25,7 @@ rm(matches)
 
 
 
-# COMBINE NCBI AND GBIF MATCHES ######################################################################
+# COMBINE NCBI AND GBIF MATCHES ###############################################
 # combine both accepted plant id columns
 col_merge <- grep(tax_level, names(fin))
 fin[is.na(fin[,col_merge[1]]),col_merge[1]] <- fin[is.na(fin[,col_merge[1]]),col_merge[2]]
@@ -27,7 +39,6 @@ table(is.na(fin$accepted_id[fin$source=="ncbi"]))/nrow(fin[fin$source=="ncbi",])
 table(is.na(fin$accepted_id[fin$source=="gbif"]))/nrow(fin[fin$source=="gbif",]) # 85.1%
 
 # should be all accepted, check:
-wcp <- readRDS("processed_data/apg_wcp_jul_21_clean.rds")
 gbif_labels <- fin[fin$source=="gbif",]
 ncbi_labels <- fin[fin$source=="ncbi",]
 
@@ -55,7 +66,7 @@ if(all(wcp_tip_sub$taxon_status=="Accepted")){print("All taxa have status accept
 
 
 
-### REPLACE TIP LABELS and RESOlVE MULTIPLE MATCHES #################################################################
+### REPLACE TIP LABELS and RESOLVE MULTIPLE MATCHES #################################################################
 
 # put wcsp IDs on tree
 phylo_org <- phylo
@@ -116,4 +127,4 @@ Sys.time()
 res_multi_noNA <- na.omit(res_multi)
 clean_tree <- keep.tip(phylo, as.character(res_multi_noNA))
 
-
+write.tree(clean_tree, "../processed_data/allmb_matched_clean.tre")

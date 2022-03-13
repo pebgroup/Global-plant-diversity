@@ -1,6 +1,13 @@
 # Script to check inconsistencies in WCVP #####
 
 
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str())) 
+library(dplyr)
+
+wcp <- readRDS("../processed_data/apg_wcp_jul_21.rds")
+
 # Remove entries that don't have accepted IDs
 wcp <- wcp[-which(is.na(wcp$accepted_plant_name_id)),]
 
@@ -84,4 +91,4 @@ which(wcp2$taxon_status!="Accepted" & wcp2$plant_name_id %in% wcp2$accepted_plan
 table(wcp2$accepted_plant_name_id %in% wcp2$plant_name_id) # this is not zero because some of the accepted IDs point to taxon IDs that have no accepted IDs, and those have been removed earlier. This is alright, has been like that in the old version 
 
 
-
+saveRDS(wcp2, "processed_data/apg_wcp_jul_21_clean.rds")
