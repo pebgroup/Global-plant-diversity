@@ -13,6 +13,8 @@ library(lavaan)
 library(png)
 library(Simpsons)
 library(DiagrammeR)
+library(ggsci)
+library(plyr)
 rm(list = setdiff(ls(), lsf.str()))  
 
 
@@ -96,11 +98,6 @@ dat_no.na$level3 <- row.names(dat_no.na)
 cat(max.var.mod_mod7)
 summary(max.var.mod.fit.mod7, standardized = TRUE, fit.measures=TRUE, rsq=TRUE)
 
-# 'sr_trans ~ soil + sub_trop_mbf + area + mrd + mont_gs+mat_m+prs_m+tri+tra_m
-# mrd ~ pre_m + sub_trop_mbf + prs_m + mio_mat_ano_m+soil+tri+area
-# soil ~ area+mont_gs
-# sub_trop_mbf ~ pre_m + tra_m + mat_m + area + tri'
-
 fm <- "
 sr_trans ~ s*soil + trf*sub_trop_mbf + a*area + mrd + ms*mont_gs + t*tra_m + m*mat_m + prs_m + tr0*tri
 mrd ~ p2*pre_m + trf2*sub_trop_mbf + prs_m + mio_mat_ano_m + s1*soil + tri + a3*area 
@@ -145,7 +142,7 @@ pres2[,grep("est|se", names(pres2))] <- round(pres2[,grep("est|se", names(pres2)
 pres2[,grep("pvalue", names(pres2))] <- round(pres2[,grep("pvalue", names(pres2))],3)
 temp <- pres2[order(pres2$op, pres2$lhs, abs(pres2$est.std), decreasing = T),]
 
-write.csv(temp,"../processed_data/sem_model_output.csv") 
+#write.csv(temp,"../processed_data/sem/sem_model_output.csv") 
 
 
 
@@ -161,7 +158,7 @@ resid(fm.fit, "cor")
 pres2 <- standardizedSolution(fm.fit)
 pres3 <- pres2[pres2$pvalue<0.05 & pres2$op=="~",]
 sig.sr <- pres3[pres3$lhs %in% c("sr_trans"),]
-#plot_sr <- dat_no.na[,c("sr_trans", sig.sr$rhs)]
+plot_sr <- dat_no.na[,c("sr_trans", sig.sr$rhs)]
 
 
 plot_sr <- pivot_longer(plot_sr, col=-sr_trans)
@@ -233,39 +230,34 @@ prs_sr <- ggplot(dat_no.na, aes(x=prs_m, y=sr_trans, col=factor(mat_breaks)))+
     ylab("species richness")
 
 
-## MRD area
-n=10
-dat_no.na$soil_breaks <- c(1:n)[cut(dat_no.na$soil, breaks=n)]
-table(dat_no.na$soil_breaks)
-
-simp_area1 <- Simpsons(area, mrd, data=dat_no.na, nreps=500) 
-simp_area1 <- Simpsons(area, mrd, clusterid = soil_breaks, data=dat_no.na, nreps=500) 
-
-area_mrd <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
-  geom_point()+
-  scale_x_continuous("area", trans="sqrt")+
-  scale_color_viridis_d(option = "plasma", 'soil bins')+
-  geom_smooth(method = "lm", se=F, col="grey")+
-  geom_smooth(method = "lm", aes(group=soil_breaks), se=F)+
-  guides(colour = guide_legend(reverse=T))#+
-empty <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
-  geom_blank()+
-  theme_void()
+# ## MRD area
+# n=10
+# dat_no.na$soil_breaks <- c(1:n)[cut(dat_no.na$soil, breaks=n)]
+# table(dat_no.na$soil_breaks)
+# 
+# simp_area1 <- Simpsons(area, mrd, data=dat_no.na, nreps=500) 
+# simp_area1 <- Simpsons(area, mrd, clusterid = soil_breaks, data=dat_no.na, nreps=500) 
+# 
+# area_mrd <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
+#   geom_point()+
+#   scale_x_continuous("area", trans="sqrt")+
+#   scale_color_viridis_d(option = "plasma", 'soil bins')+
+#   geom_smooth(method = "lm", se=F, col="grey")+
+#   geom_smooth(method = "lm", aes(group=soil_breaks), se=F)+
+#   guides(colour = guide_legend(reverse=T))#+
+# empty <- ggplot(dat_no.na, aes(x=area+abs(min(area)), y=mrd, col=factor(soil_breaks)))+ 
+#   geom_blank()+
+#   theme_void()
 
 top_row <- plot_grid(ncol = 2, rel_widths = c(0.8,1),
           labels = c("A", "B"), label_fontface = "plain",
           tra_sr, prs_sr)
-bottom_row <- plot_grid(ncol = 2, rel_widths = c(1, 0.77),
-                        labels = c("", ""),
-                        area_mrd, empty)
-plot_grid(top_row, bottom_row, nrow=2)
-#ggsave("figures/simpsons_paradox.png", width=7, height=7, units = "in", dpi = 600)
-
+# bottom_row <- plot_grid(ncol = 2, rel_widths = c(1, 0.77),
+#                         labels = c("", ""),
+#                         area_mrd, empty)
 plot_grid(top_row, nrow=1)
-ggsave("../figures/simpsons_paradox_SR.png", width=7, height=3.5, units = "in", dpi = 600)
+#ggsave("../figures/seasonality_paradox.png", width=8, height=4, units = "in", dpi = 600)
 
-plot_grid(bottom_row, nrow=1)
-ggsave("../figures/simpsons_paradox_MRD.png", width=7, height=3.5, units = "in", dpi = 600)
 
 ## Global patterns for temperature range influence on SR
 ### get slopes and p-values for each mat bin
@@ -290,6 +282,7 @@ ggsave("../figures/slope_mat.png",width=2.5, height=2,units="in")
 
 # visualize as map
 simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
+simpsons_map <- st_transform(simpsons_map, "+proj=moll")
 simpsons_map$tra_dynamics <- "positive"
 simpsons_map$tra_dynamics[simpsons_map$LEVEL_3_CO %in% 
                             dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
@@ -314,12 +307,12 @@ theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
       legend.text = element_blank())
 )
 
-logo_file <- readPNG("figures/slope_mat.png")
+logo_file <- readPNG("../figures/slope_mat.png")
 my_plot_4 <- ggdraw() +
   draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
   draw_plot(my_plot3)
 my_plot_4
-ggsave("../figures/tra_scale_map.png", dpi=600, width=10, height=7)
+# ggsave("../figures/tra_scale_map.png", dpi=600, width=10, height=7)
 
 
 ## Global patterns for precipitation seasonality influence on SR
@@ -344,11 +337,6 @@ ggplot(res, aes(x=mat_bin_means, y=prs_coef))+
 ggsave("../figures/slope_mat2.png",width=2.5, height=2,units="in")
 
 # visualize as map
-#simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
-#simpsons_map$prs_dynamics <- "positive"
-#simpsons_map$prs_dynamics[simpsons_map$LEVEL_3_CO %in% 
-#                            dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
-# add slopes for all bins
 res$mat_breaks <- c(1:10)
 # merge level 3 in via mat_bin_means
 temp <- merge(dat_no.na[, c("mat_breaks", "level3")], res, all.x=TRUE)
@@ -376,85 +364,20 @@ my_plot_4 <- ggdraw() +
   draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
   draw_plot(my_plot3)
 my_plot_4
-ggsave("../figures/prs_scale_map.png", dpi=600, width=10, height=7)
+ggsave("../figures/tra_scale_map.png", dpi=600, width=10, height=7)
 
-
-
-
-## Global patterns for area influence on MRD
-### get slopes and p-values for each soil bin
-(res <- t(sapply(split(dat_no.na, list(dat_no.na$soil_breaks)),
-                 function(subd){summary(lm(mrd ~ area, data = subd))$coefficients[2,c(1,4)]}))) 
-res <- as.data.frame(res)
-names(res) <- c("area_coef", "area_pvalue")
-
-
-# get mean mat_m per group
-soil_mean <- tapply(dat_no.na$soil, dat_no.na$soil_breaks, mean)
-res$soil_bin_means <- as.numeric(soil_mean)
-
-# exclude the NaN area p value (first row)
-res <- res[-1,]
-
-
-ggplot(res, aes(x=soil_bin_means, y=area_coef))+
-  geom_point(aes(col=area_coef, shape=area_pvalue<0.05), size=1.7)+
-  scale_color_continuous("")+ # set limits manually
-  scale_y_continuous("MRD~area coefficient", limits = c(-1,3.5))+
-  theme(legend.position = "null", 
-        plot.background = element_blank(),
-        panel.background = element_blank())+
-  geom_hline(yintercept = 0, lty=2)
-ggsave("../figures/slope_soil.png",width=2.5, height=2,units="in")
-
-# visualize as map
-#simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
-#simpsons_map$prs_dynamics <- "positive"
-#simpsons_map$prs_dynamics[simpsons_map$LEVEL_3_CO %in% 
-#                            dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
-# add slopes for all bins
-res$soil_breaks <- c(1:10)
-# merge level 3 in via mat_bin_means
-temp <- merge(dat_no.na[, c("soil_breaks", "level3")], res, all.x=TRUE)
-simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
-simpsons_map <- merge(simpsons_map, temp[,c("level3","area_coef","area_pvalue")],
-                      by.x="LEVEL_3_CO", by.y="level3", all.x=TRUE)
-
-simpsons_map$area_coef2 <- simpsons_map$area_coef
-simpsons_map$area_coef2[simpsons_map$area_pvalue>0.05] <- NA
-(my_plot3 <- ggplot(simpsons_map) + 
-    geom_sf(aes(fill = area_coef), lwd=0.1) + 
-    scale_fill_continuous("", na.value="grey70", 
-                          limits=c(-1,
-                                   max(simpsons_map$area_coef, na.rm=T)))+
-    theme_void()+
-    theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
-          legend.background = element_blank(),
-          legend.key = element_blank(),
-          legend.key.width = unit(3, "mm"),
-          legend.key.height = unit(6, "mm"),
-          legend.text = element_blank())
-)
-
-logo_file <- readPNG("figures/slope_soil.png")
-my_plot_4 <- ggdraw() +
-  draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
-  draw_plot(my_plot3)
-my_plot_4
-ggsave("../figures/area_scale_map.png", dpi=600, width=10, height=7)
-
-#save.image("processed_data/results.RData")
 
 
 
 
 
 # Spatial autocorrelation ########################################################################
-## Uses code from https://github.com/jebyrnes/spatial_correction_lavaan to get residuals 
+# Uses code from https://github.com/jebyrnes/spatial_correction_lavaan to get
+# residuals
 
 dat_no.na <- dat_no.na[order(dat_no.na$level3),]
 load("../processed_data/best_model.RData")
-# Table of estimates ###########################################################################
+# **** Table of estimates ----------------------------------------------
 ## add indirect effect names to variables
 cat(max.var.mod_mod7)
 
@@ -512,8 +435,8 @@ plot_grid(labels = c("A", "B", "C"), label_fontface = "plain", ncol = 2,
             scale_color_continuous("SR")+
             geom_smooth(method="lm")
           )
-ggsave(file="../figures/SEM_residuals_SR.png",
-       width=7, height=7, units = "in", dpi = 600)
+#ggsave(file="../figures/SEM_residuals_SR.png",
+#       width=7, height=7, units = "in", dpi = 600)
 
 
 
@@ -559,7 +482,7 @@ ggplot(temp, aes(x=dist.class, y=value, col=name)) +
   scale_x_continuous("Distance class (km)")+
   scale_color_discrete("SEM residuals", labels=c("MRD", "SR"))+
   ylab("Moran's I")
-ggsave("../figures/SAC_sem_residuals.png", width=5, height=4, units = "in", dpi = 600)
+#ggsave("../figures/SAC_sem_residuals.png", width=5, height=4, units = "in", dpi = 600)
 
 
 ## Correct estimates for spatial autocorrelation
@@ -594,16 +517,20 @@ temp$se <- round(temp$se,2)
 temp$pvalue <- round(temp$pvalue,2)
 temp$Estimate_sac <- round(temp$Estimate_sac,2)
 temp$Std.err_sac <- round(temp$Std.err_sac,2)
-write.csv(temp, "../processed_data/sem_model_coefficients_SAC_correction.csv")
+#write.csv(temp, "../processed_data/sem_model_coefficients_SAC_correction.csv")
 
 
 
-# Maps and  figures ##########################################################
 
 
-# SEM ---------------------------------------------------------------------
 
-## variable names version ####
+
+# Maps and  figures ########################################################
+
+
+# **** SEM figure ----------------------------------------------------------
+
+## ***** variable names version ####
 #tmp = 
 grViz("
 digraph SEM {
@@ -680,7 +607,7 @@ digraph SEM {
     
 }
 ")
-## Full names version ####
+## ***** Full names version ####
 #tmp = 
 grViz("
 digraph SEM {
@@ -764,13 +691,17 @@ digraph SEM {
     
 }
 ")
-# 2. Convert to SVG, then save as png ####
+# 2. Convert to SVG, then save as png
 tmp = DiagrammeRsvg::export_svg(tmp)
 tmp = charToRaw(tmp) # flatten
 #rsvg::rsvg_svg(tmp, "../figures/sem.svg")
 
-# Global SR map ------------------------------------------------------------------------------------
 
+
+
+
+# *** Global SR map -------------------------------------------------------
+rm(list = setdiff(ls(), lsf.str()))  
 shp <- readRDS("../processed_data/shp_object_fin_analysis.RDS")
 dat_no.na <- readRDS("../processed_data/sem_input_data.rds")
 dat_no.na$level3 <- row.names(dat_no.na)
@@ -825,12 +756,14 @@ test$sr <- test$sr+10 # tweak to adjust for removed axis padding
            panel.border = element_blank(),
            axis.line.y = element_line(),
            axis.text.y = element_text(hjust = 0.5)))
-plot_grid(sr_map2, sr_ldg_map, 
+SR <- plot_grid(sr_map2, sr_ldg_map, 
           ncol = 2, nrow = 1, 
           rel_widths = c(4,1), rel_heights = c(1,1), labels = c("A", ""), label_fontface = "plain")
-ggsave("../figures/sr_map_AIO_mollweide.png", dpi=600, width=10, height=4.32)
+#ggsave("../figures/sr_map_AIO_mollweide.png", dpi=600, width=10, height=4.32)
 
-# Global MRD map ------------------------------------------------------------------------------------
+
+
+# *** Global MRD map ---------------------------------------------------------
 
 lcol.mrd <- (min(thicc_lines$mrd)-min(shp$mrd))/(max(shp$mrd)-min(shp$mrd))
 ucol.mrd <- (max(thicc_lines$mrd)-min(shp$mrd))/(max(shp$mrd)-min(shp$mrd))
@@ -868,56 +801,64 @@ ucol.mrd <- (max(thicc_lines$mrd)-min(shp$mrd))/(max(shp$mrd)-min(shp$mrd))
            axis.line.y = element_line(),
            axis.text.y = element_text(hjust = 0.5))
 )
-plot_grid(mrd_map2, mrd_ldg_map, 
+MRD <- plot_grid(mrd_map2, mrd_ldg_map, 
           ncol = 2, nrow = 1, 
           rel_widths = c(4,1), labels = c("B", ""),  label_fontface = "plain")
-ggsave("../figures/mrd_map_AIO.png", dpi=600, width=10, height=4.32)
+#ggsave("../figures/mrd_map_AIO.png", dpi=600, width=10, height=4.32)
 
-## MRD TACTED ####
-lcol.mrd_TACT <- (min(thicc_lines$mrd_TACT)-min(shp$mrd_TACT))/(max(shp$mrd_TACT)-min(shp$mrd_TACT))
-ucol.mrd_TACT <- (max(thicc_lines$mrd_TACT)-min(shp$mrd_TACT))/(max(shp$mrd_TACT)-min(shp$mrd_TACT))
-(mrd_map3 <- ggplot(shp) + 
-    geom_sf(aes(fill = mrd_TACT), lwd=0.1) + 
-    geom_sf(data=thicc_lines, lwd=1.5, aes(col=mrd_TACT), show.legend=F)+
+plot_grid(SR, MRD, nrow=2)
+ggsave("../figures/global_maps.png", dpi=600, width=10, height=8.64)
+ggsave("../figures/global_maps.pdf", dpi=600, width=10, height=8.64)
+
+
+
+
+# *** DR map --------------------------------------------------------------
+lcol.mdr <- (min(thicc_lines$mdr)-min(shp$mdr))/(max(shp$mdr)-min(shp$mdr))
+ucol.mdr <- (max(thicc_lines$mdr)-min(shp$mdr))/(max(shp$mdr)-min(shp$mdr))
+(mdr_map2 <- ggplot(test) + 
+    geom_sf(aes(fill = mdr), lwd=0.1) + 
+    geom_sf(data=thicc_lines, lwd=1.5, aes(col=mdr), show.legend=F,)+
     scale_colour_viridis_c(option = "plasma", 
-                           begin = lcol.mrd_TACT, end = ucol.mrd_TACT)+
-    scale_fill_viridis_c("MRD_TACT", option = "plasma")+ #, 
+                           begin = lcol.mdr, end = ucol.mdr, trans="log")+
+    scale_fill_viridis_c("DR", option = "plasma", trans="log")+ #, 
     theme(legend.position = c(0.21, 0.3),
           legend.background = element_blank(),
           legend.key = element_blank(),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          plot.margin = margin(0, 0, 0, 0, "cm"),
+          plot.margin = margin(0, 0, 0.5, 0.5, "cm"),
           panel.border = element_blank()
     )+
-    coord_sf(xlim = c(-180, 180), ylim = c(-70, 85), expand = F, 
-             label_axes = "-NE-")+
+    coord_sf(expand = F, label_axes = "----")+
     xlab(" "))
+(mdr_ldg_map <- ggplot(test, aes(lat,mdr,col=mdr))+
+    geom_point(alpha=0.5)+
+    scale_color_viridis_c("mdr", option = "plasma", trans="log")+ 
+    scale_y_continuous("DR", trans="log")+
+    scale_x_continuous("", labels = c("80°S","60°S","40°S","20°S", "0°", "20°N","40°N","60°N", "80°N"),
+                       breaks = c(-8000000,-6000000,-4000000, -2000000, 0, 2000000,4000000,6000000, 8000000), 
+                       position="bottom")+
+    geom_smooth(col="grey40", lwd=0.5)+
+    coord_flip(xlim =c(-9020048, 8750122), 
+               ylim =c(min(test$mdr, na.rm = T)-1, max(test$mdr, na.rm = T)+1),expand = F)+
+    theme( panel.grid.major = element_blank(),
+           panel.grid.minor = element_blank(),
+           plot.margin = margin(0, 0, 0, -0.4, "cm"),
+           legend.position = "none", 
+           panel.border = element_blank(),
+           axis.line.y = element_line(),
+           axis.text.y = element_text(hjust = 0.5))
+)
+mdr <- plot_grid(mdr_map2, mdr_ldg_map, 
+                 ncol = 2, nrow = 1, 
+                 rel_widths = c(4,1), labels = c("B", ""),  label_fontface = "plain")
 
-## MDR
-lcol.mdr_TACT <- (min(thicc_lines$mdr_TACT)-min(shp$mdr_TACT))/(max(shp$mdr_TACT)-min(shp$mdr_TACT))
-ucol.mdr_TACT <- (max(thicc_lines$mdr_TACT)-min(shp$mdr_TACT))/(max(shp$mdr_TACT)-min(shp$mdr_TACT))
-(mdr_map4 <- ggplot(shp) + 
-    geom_sf(aes(fill = mdr_TACT), lwd=0.1) + 
-    geom_sf(data=thicc_lines, lwd=1.5, aes(col=mdr_TACT), show.legend=F)+
-    scale_colour_viridis_c(option = "plasma", 
-                           begin = lcol.mdr_TACT, end = ucol.mdr_TACT, trans="log")+
-    scale_fill_viridis_c("MDR TACT", option = "plasma", trans="log")+ #, 
-    theme(legend.position = c(0.21, 0.3),
-          legend.background = element_blank(),
-          legend.key = element_blank(),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          plot.margin = margin(0, 0, 0, 0, "cm"),
-          panel.border = element_blank()
-    )+
-    coord_sf(xlim = c(-180, 180), ylim = c(-70, 85), expand = F, 
-             label_axes = "-NE-")+
-    xlab(" "))
 
-# Latitudinal patterns SR + MRD  -------------------------------------------------------------------
 
-shpbins <- shp
+# *** Latitudinal patterns SR + MRD ----------------------------------------
+
+shpbins <- test
 # scale data to values between 0 and 1 for comparison
 shpbins$sr_scaled <- range01(shpbins$sr)
 shpbins$mrd_scaled <- range01(shpbins$mrd)
@@ -952,8 +893,8 @@ temp$g3 <- factor(temp$g3, levels = c("Americas","Afrope","Australasia"))
           axis.ticks = element_line(colour = "grey40"))+
     guides(color=guide_legend(override.aes=list(fill=NA))) # override geom_smooth() default legend key grey background
 )
-ggsave("figures/map_lat_patterns.pdf", width=7.6, height=4)
-ggsave("figures/map_lat_patterns.png", width=7.6, height=4)
+ggsave("../figures/map_lat_patterns.pdf", width=7.6, height=4)
+ggsave("../figures/map_lat_patterns.png", width=7.6, height=4)
 
 (continent_scatterplot_comb <- ggplot(na.omit(temp), aes(lat, value, col=name))+
     geom_point(alpha=0.5)+
@@ -977,8 +918,8 @@ ggsave("figures/map_lat_patterns.png", width=7.6, height=4)
           plot.background = element_rect(fill = "transparent", color = NA))+
     guides(color=guide_legend(override.aes=list(fill=NA))) # override geom_smooth() default legend key grey background
 )
-ggsave("figures/map_lat_patterns_alt.pdf", width=7.6, height=4, bg = "transparent")
-ggsave("figures/map_lat_patterns_alt.png", width=7.6, height=4, bg = "transparent")
+ggsave("../figures/map_lat_patterns_alt.pdf", width=7.6, height=4, bg = "transparent")
+ggsave("../figures/map_lat_patterns_alt.png", width=7.6, height=4, bg = "transparent")
 
 
 # save region maps
@@ -996,7 +937,7 @@ shp_2 = st_shift_longitude(shp)
 ggplot(shp_2[shp_2$CONTINENT %in% c("ASIA-TEMPERATE", "ASIA-TROPICAL", "AUSTRALASIA"),]) +
   geom_sf(lwd=0, fill = "grey30")+
   theme(panel.grid = element_blank())
-ggsave("figures/asia.png", width=2, height=2, units = "in", dpi = 600)
+ggsave("../figures/asia.png", width=2, height=2, units = "in", dpi = 600)
 
 ggplot(shp) + 
   geom_sf(lwd=0, fill = "grey50")+
@@ -1005,48 +946,26 @@ ggplot(shp) +
         panel.border = element_blank())+
   geom_sf(data=shp_2[shp_2$CONTINENT %in% c("ASIA-TEMPERATE", "ASIA-TROPICAL", "AUSTRALASIA"),], lwd=0, fill = "grey90")+
   theme(panel.grid = element_blank())
-ggsave("figures/world2.png", width=5, height=3, units = "in", dpi = 600)
+ggsave("../figures/world2.png", width=5, height=3, units = "in", dpi = 600)
 
 
-## alternative latitude pattern plot
-# (global_scatterplot_red <- ggplot(shp, aes(lat, sr))+
-#     geom_point(alpha=0.5)+
-#     scale_y_continuous("species richness", trans = "sqrt")+
-#     scale_x_continuous("latitude centroid botanical country")+
-#     geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
-#     geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
-# )
-# (global_scatterplot_mrd_red <- ggplot(shp, aes(lat, mrd))+
-#     geom_point(alpha=0.5)+
-#     scale_y_continuous("mean root distance")+
-#     scale_x_continuous("latitude centroid botanical country")+    
-#     geom_smooth(data=shp[shp$lat<0,], method="lm", col="red")+
-#     geom_smooth(data=shp[shp$lat>0,], method="lm", col="blue")
-# )
-# (global_scatterplot_MRD_SR_red <- ggplot(shp, aes(mrd, sr))+
-#     geom_point(alpha=0.5)+
-#     scale_y_continuous("species richness", trans = "sqrt")+
-#     scale_x_continuous("mean root distance")+
-#     geom_smooth(method="lm", col="black")
-# )
-# plot_grid(nrow=1, global_scatterplot_red, global_scatterplot_mrd_red, global_scatterplot_MRD_SR_red)
 
 ## latitudinal stats
-cor.test(abs(shp$lat), shp$sr, method = "p") # pearson correlation = -0.38
-cor.test(shp$lat[shp$lat<0], shp$sr[shp$lat<0], method = "p")
-cor.test(shp$lat[shp$lat>0], shp$sr[shp$lat>0], method = "p")
+cor.test(abs(test$lat), test$sr, method = "p") # pearson correlation = -0.38
+cor.test(test$lat[test$lat<0], test$sr[test$lat<0], method = "p")
+cor.test(test$lat[test$lat>0], test$sr[test$lat>0], method = "p")
 
-cor.test(abs(shp$lat), shp$mrd, method = "p")
-cor.test(shp$lat[shp$lat<0], shp$mrd[shp$lat<0], method = "p")
-cor.test(shp$lat[shp$lat>0], shp$mrd[shp$lat>0], method = "p")
-summary(lm(mrd~lat, data=shp[shp$lat<0,]))
-summary(lm(mrd~lat, data=shp[shp$lat>0,]))
-summary(lm(mrd~abs(lat), data=shp))
+cor.test(abs(test$lat), test$mrd, method = "p")
+cor.test(test$lat[test$lat<0], test$mrd[test$lat<0], method = "p")
+cor.test(test$lat[test$lat>0], test$mrd[test$lat>0], method = "p")
+summary(lm(mrd~lat, data=test[test$lat<0,]))
+summary(lm(mrd~lat, data=test[test$lat>0,]))
+summary(lm(mrd~abs(lat), data=test))
 
 
-# Lat patterns robustness --------------------------------------------------------------------------------
+# *** Lat patterns robustness ---------------------------------------------
 ## bootstrap for different sample size differs between hemispheres 
-table(shp$lat<0) 
+table(test$lat<0) 
 reps <- 500
 samp.size <- 50
 res.hemisphere <- data.frame(cor.nh.mrd=NA, pval.nh.mrd=NA,
@@ -1056,14 +975,14 @@ res.hemisphere <- data.frame(cor.nh.mrd=NA, pval.nh.mrd=NA,
                              n=c(1:reps))
 set.seed(6348957)
 for(i in 1:reps){
-  nh <- shp[shp$lat>0,]
+  nh <- test[test$lat>0,]
   temp <- nh[sample(1:nrow(nh), samp.size, replace = F),]
   res.hemisphere$cor.nh.sr[i] <- cor.test(temp$lat, temp$sr)$estimate
   res.hemisphere$pval.nh.sr[i] <- cor.test(temp$lat, temp$sr)$p.value
   res.hemisphere$cor.nh.mrd[i] <- cor.test(temp$lat, temp$mrd)$estimate
   res.hemisphere$pval.nh.mrd[i] <- cor.test(temp$lat, temp$mrd)$p.value
   
-  sh <- shp[shp$lat<0,]
+  sh <- test[test$lat<0,]
   temp <- sh[sample(1:nrow(sh), samp.size, replace = F),]
   res.hemisphere$cor.sh.sr[i] <- cor.test(temp$lat, temp$sr)$estimate
   res.hemisphere$pval.sh.sr[i] <- cor.test(temp$lat, temp$sr)$p.value
@@ -1072,7 +991,7 @@ for(i in 1:reps){
   
   if(!i%%1)cat(i,"\r")
 }
-# barplots mit significances filling
+# barplots 
 pres <- pivot_longer(res.hemisphere[,c(grep("cor|^n", names(res.hemisphere)))], 
                      cols=contains(c("cor")), names_to = "name", values_to = "cor")
 pres2 <- pivot_longer(res.hemisphere[,c(grep("pval|^n", names(res.hemisphere)))], 
@@ -1094,106 +1013,8 @@ ggplot(pres3, aes(cor, fill=sig))+
   facet_wrap(~name)+
   theme(strip.background = element_blank(),
         strip.text.x = element_text(size = 8))+
-  scale_fill_startrek(name="p-value<0.05")
-ggsave("figures/lat_patterns_robustness.png", width=6, height=4.5)
+  scale_fill_startrek(name="Pvalue < 0.05")
+ggsave("../figures/lat_patterns_robustness.png", width=6, height=4.5)
 
 
 
-# oldversionfigures ####
-# grViz("
-# digraph concept {
-#   # Node statements
-#   
-#   subgraph cluster_outer{style=invis
-#   rankdir='TB'
-#   subgraph cluster_uppertwo {style=invis
-#   //    rankdir='TB'
-#   subgraph clusterresponse {
-#     node [shape = Mrecord, fontname = Helvetica, fontsize=10, style=filled, 
-#           color=white, peripheries=2, fillcolor=grey90]
-#     SR; MRD   
-#   }
-#   subgraph cluster_line1 {  
-#     subgraph clusterclimate {
-#       style=fill; bgcolor='#71A8F4'; label='Climate'
-#       node [shape = ellipse, style=filled, fillcolor = white, 
-#             color=white, peripheries=1, margin=0.05, rank=low]
-#       mat; pre}
-#     subgraph clusterseason {
-#       style=fill; bgcolor='#F4F471'; label='Seasonality'
-#       node [shape = oval, style=filled, fillcolor = white, 
-#             color=white, peripheries=1]
-#       prs; tra }
-#     subgraph clusterCS {
-#       style=fill; bgcolor='#F48771'; label='Climate stability'  
-#       node [shape = oval, style=filled, fillcolor = white, 
-#             color=white, peripheries=1]
-#       mat_ano_mio
-#       mat_ano_lgm}
-#     
-#     //    mat -> prs ->  mat_ano_mio [style=invis]
-#   }
-#   }
-#   subgraph cluster_line3 {style=invis  
-#   subgraph clusterbio {
-#     style=fill; bgcolor='#9DF471'; label='Biomes'
-#     node [shape = oval, style=filled, fillcolor = white, 
-#           color=white, peripheries=1, rank=top]
-#     sub_trop_mbf[label='(sub)trop \n mbf']
-#     temp_bmf[label='temp. \n bmf']}
-#   subgraph clusterEH {
-#     style=fill; bgcolor='#F471B2'; label='Environmental\nheterogeneity'
-#     node [shape = oval, style=filled, fillcolor = white, 
-#           color=white, peripheries=1]
-#     soil
-#     area
-#     tri
-#     elev_range
-#     sd_tra
-#     sd_prs
-#     sd_mat
-#     sd_pre
-#   }
-# //    sub_trop_mbf -> area [style=invis]
-#   }
-#   MRD -> {temp_bmf; sub_trop_mbf; area; soil; tri; elev_range}[style=invis]
-#   SR -> {temp_bmf; sub_trop_mbf; area; soil; tri; elev_range}[style=invis]
-#   mat -> pre [style=invis]
-#   mat_ano_lgm -> mat_ano_mio[style=invis]
-#   tra -> prs[style=invis]
-#   sub_trop_mbf -> temp_bmf[style=invis]
-#   elev_range -> sd_prs[style=invis]
-# //  tri -> sd_tra[style=invis]
-# //  tri -> sd_mat[style=invis]
-# //  sd_pre -> sd_mat[style=invis]
-# //  sd_prs -> sd_tra[style=invis]  
-#   }
-#   
-#   # Edge statements
-#   pre -> SR
-#   mat -> MRD
-#   area -> SR [ltail='clusterEH']
-#   area -> MRD [ltail='clusterEH']
-#   sub_trop_mbf -> SR [ltail='clusterbio', headport='left']
-#   sub_trop_mbf -> MRD [ltail='clusterbio']
-#   prs -> SR [ltail='clusterseason']
-#   prs -> MRD [ltail='clusterseason']
-#   mat_ano_mio -> SR [ltail='clusterCS']
-#   mat_ano_mio -> MRD [ltail='clusterCS']
-#   
-#   tra -> sub_trop_mbf
-#   
-#   //    mat_ano_mio -> {SR MRD}
-#   area -> {sd_tra; sd_prs; sd_mat; sd_pre; soil}
-#   //    sub_trop_mbf -> {SR MRD}
-#   //  edge [style=invis]
-#   //    pre -> SR
-#   //    mat_ano -> SR
-#   
-#   graph[nodesep=0.1, layout=dot, ranksep=0.2, splines=ortho, compound=true]
-#   //  graph[nodesep=0.01, layout=circo, mindist=.7]  
-#   //  graph[layout=twopi, ranksep=1.5, root=SR, splines=true, overlap=false]
-#   
-# }
-# ")
-# 
