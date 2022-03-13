@@ -1,8 +1,4 @@
-# Analysis script for WCSP paper
-# loaded data:
-# comm: community matrix. rows represents regions, columns WCSP species IDs
-# phytoregions shapefile
-# mean root distance
+# Assemble data set
 
 
 wd <- dirname(rstudioapi::getSourceEditorContext()$path)
@@ -62,9 +58,15 @@ biome_names <- c("sub_trop_mbf", "sub_trop_dbf", "sub_trop_cf", "temp_bmf", "tem
 names(biomes)[grepl("^X", names(biomes))] <- biome_names
 shape@data <- cbind(shape@data, biomes[,-grep("country",names(biomes))])
 
+# add canopy
+canopy <- readRDS("../processed_data/canopy.rds")
+shape@data$can_height <- canopy$can_height
+shape@data$can_range <- canopy$can_range
+
 
 # Transform to data frame for ggplot
 shp <- st_as_sf(shape)
 saveRDS(shp, "../processed_data/shp_object_fin_analysis.RDS")
+
 
 
