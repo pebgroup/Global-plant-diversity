@@ -1,6 +1,15 @@
 # Script to get topography for botanical countries. 
 # Using Terrain ruggedness index (TRI) (Riley et al. 1999)
 
+wd <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(wd)
+rm(list = setdiff(ls(), lsf.str())) 
+library(raster)
+library(rgdal)
+
+shape <- readOGR("../data/shapefile_bot_countries/level3_mod.shp")
+elev <- raster("../data/wc2.1_30s_elev.tif")
+
 # TRI
 Sys.time()
 ruggedness_mean <- c()
@@ -49,7 +58,7 @@ for(i in 1:nrow(shape@data)){
 
 
 res <- data.frame(country=shape$LEVEL_3_CO, ruggedness_mean, elevation_range)
-saveRDS(res, file="processed_data/topography.rds")
+saveRDS(res, file="../processed_data/topography.rds")
 
 # 
 # # check some results
@@ -98,3 +107,5 @@ saveRDS(res, file="processed_data/topography.rds")
 #   plot_3d(elmat, zscale = 10, fov = 0, theta = 135, zoom = 0.75, phi = 45, windowsize = c(1000, 800))
 # Sys.sleep(0.2)
 # render_snapshot()
+
+
