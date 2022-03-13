@@ -447,7 +447,7 @@ dat_no.na <- dat_no.na[,-grep("level3",names(dat_no.na))]
 dat_no.na <- apply(dat_no.na, 2, ztrans)
 dat_no.na <- as.data.frame(dat_no.na)
 
-saveRDS(dat_no.na, "../processed_data/sem/sem_input_data.rds")
+saveRDS(dat_no.na, "../processed_data/sem/sem_input_data.RDS")
 # feed this into model selection
 
 

@@ -88,9 +88,9 @@ tmp = charToRaw(tmp) # flatten
 
 # Table of estimates ###########################################################################
 rm(list = setdiff(ls(), lsf.str()))  
-load("../processed_data/best_model.RData")
+load("../processed_data/best_model.RDATA")
 shp <- readRDS("../processed_data/shp_object_fin_analysis.RDS")
-dat_no.na <- readRDS("../processed_data/sem_input_data.rds")
+dat_no.na <- readRDS("../processed_data/sem_input_data.RDS")
 dat_no.na$level3 <- row.names(dat_no.na)
 
 
@@ -376,7 +376,7 @@ ggsave("../figures/tra_scale_map.png", dpi=600, width=10, height=7)
 # residuals
 
 dat_no.na <- dat_no.na[order(dat_no.na$level3),]
-load("../processed_data/best_model.RData")
+load("../processed_data/best_model.RDATA")
 # **** Table of estimates ----------------------------------------------
 ## add indirect effect names to variables
 cat(max.var.mod_mod7)
@@ -703,7 +703,7 @@ tmp = charToRaw(tmp) # flatten
 # *** Global SR map -------------------------------------------------------
 rm(list = setdiff(ls(), lsf.str()))  
 shp <- readRDS("../processed_data/shp_object_fin_analysis.RDS")
-dat_no.na <- readRDS("../processed_data/sem_input_data.rds")
+dat_no.na <- readRDS("../processed_data/sem_input_data.RDS")
 dat_no.na$level3 <- row.names(dat_no.na)
 shp <- shp[shp$LEVEL_3_CO %in% c(dat_no.na$level3, "ANT"),]
 rm(dat_no.na)
