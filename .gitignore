@@ -22,6 +22,6 @@
 .Rproj.user/
 data/
 #processed_data/
-
+SI/
 figures/
 soil_SR_vs_MRD.R
