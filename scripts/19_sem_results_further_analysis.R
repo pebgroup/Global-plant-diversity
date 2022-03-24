@@ -38,7 +38,7 @@ digraph concept {
 
       node [shape = oval, style=filled, fillcolor = '#F48771', 
             color=white, peripheries=1]
-      mat_ano_mio[label='Miocene mat \n anomaly']
+      mat_ano_mio[label='Miocene \n anomaly']
       mat_ano_lgm[label='LGM mat \n anomaly']
 
     node [shape = oval, style=filled, fillcolor = '#9DF471', 
@@ -92,6 +92,9 @@ load("../processed_data/best_model.RDATA")
 shp <- readRDS("../processed_data/shp_object_fin_analysis.RDS")
 dat_no.na <- readRDS("../processed_data/sem_input_data.RDS")
 dat_no.na$level3 <- row.names(dat_no.na)
+
+# area included in analyis (load the prelim shp file including all areas)
+#sum(shp$area[shp$LEVEL_3_CO %in% dat_no.na$level3]) / sum(shp$area[shp$LEVEL_3_CO!="ANT"])
 
 
 ## add indirect effect names to variables
@@ -282,7 +285,7 @@ ggsave("../figures/slope_mat.png",width=2.5, height=2,units="in")
 
 # visualize as map
 simpsons_map <- shp[,c("LEVEL_3_CO", "sr", "mrd", "geometry")]
-simpsons_map <- st_transform(simpsons_map, "+proj=moll")
+simpsons_map <- st_transform(simpsons_map, "+proj=cea +lon_0=0 +lat_ts=30 +x_0=0 +y_0=0 +datum=WGS84 +ellps=WGS84 +units=m +no_defs")
 simpsons_map$tra_dynamics <- "positive"
 simpsons_map$tra_dynamics[simpsons_map$LEVEL_3_CO %in% 
                             dat_no.na$level3[dat_no.na$mat_breaks %in% c(9,10)]] <- "negative"
@@ -295,24 +298,26 @@ simpsons_map <- merge(simpsons_map, temp,
 
 simpsons_map$tra_coef2 <- simpsons_map$tra_coef
 simpsons_map$tra_coef2[simpsons_map$tra_pvalue>0.05] <- NA
+simpsons_map <- simpsons_map[simpsons_map$LEVEL_3_CO!="ANT",]
+
 (my_plot3 <- ggplot(simpsons_map) + 
   geom_sf(aes(fill = tra_coef2), lwd=0.1) + 
  scale_fill_continuous("", na.value="grey70")+
   theme_void()+
-theme(legend.position = c(0.265, 0.383), # c(0.265, 0.322) excluding ANT
+theme(legend.position = c(0.265, 0.322), # c(0.265, 0.322) excluding ANT
       legend.background = element_blank(),
       legend.key = element_blank(),
       legend.key.width = unit(3, "mm"),
-      legend.key.height = unit(6, "mm"),
+      legend.key.height = unit(6.5, "mm"),
       legend.text = element_blank())
 )
 
 logo_file <- readPNG("../figures/slope_mat.png")
 my_plot_4 <- ggdraw() +
-  draw_image(logo_file,  x = -0.35, y = -0.12, scale = .25) + #x = -0.35, y = -0.14, scale = .25
+  draw_image(logo_file,  x = -0.35, y = -0.14, scale = .25) + #x = -0.35, y = -0.14, scale = .25
   draw_plot(my_plot3)
 my_plot_4
-# ggsave("../figures/tra_scale_map.png", dpi=600, width=10, height=7)
+ggsave("../figures/tra_scale_map.png", dpi=600, width=10, height=7, bg="white")
 
 
 ## Global patterns for precipitation seasonality influence on SR
@@ -705,7 +710,8 @@ rm(list = setdiff(ls(), lsf.str()))
 shp <- readRDS("../processed_data/shp_object_fin_analysis.RDS")
 dat_no.na <- readRDS("../processed_data/sem_input_data.RDS")
 dat_no.na$level3 <- row.names(dat_no.na)
-shp <- shp[shp$LEVEL_3_CO %in% c(dat_no.na$level3, "ANT"),]
+
+shp <- shp[shp$LEVEL_3_CO %in% c(dat_no.na$level3),]
 rm(dat_no.na)
 ## get small countries that need a buffer / thicker lines
 thicc_lines <- shp[which(shp$area<1.2e+9),]
@@ -713,53 +719,83 @@ lcol <- min(thicc_lines$sr)/max(shp$sr)
 ucol <- max(thicc_lines$sr)/max(shp$sr)
 
 
-test <- st_transform(shp, "+proj=moll")
+test <- st_transform(shp, "+proj=cea +lon_0=0 +lat_ts=30 +x_0=0 +y_0=0 +datum=WGS84 +ellps=WGS84 +units=m +no_defs") # Behrmann
 test$centroids <- st_centroid(test) %>% 
   st_coordinates()
 test$lng <- test$centroids[,1] # x=lng
 test$lat <- test$centroids[,2] # y=lat
 
+
 (sr_map2 <- ggplot(test) + 
-    geom_sf(aes(fill=sr),lwd=0.1) + 
+    geom_sf(aes(fill=sr),lwd=0, col=NA) + 
     geom_sf(data=thicc_lines, lwd=1.5, aes(col=sr), show.legend=F)+
     scale_colour_viridis_c("SR", option = "plasma", trans = "sqrt", 
                            begin = lcol, end = sqrt(ucol))+
     scale_fill_viridis_c("SR", option = "plasma", trans = "sqrt")+ #, 
-    theme(legend.position = c(0.21, 0.3),
+    theme(legend.position = c(0.18, 0.3),
+          legend.key.height = unit(6,"mm"),
           legend.background = element_blank(),
           legend.key = element_blank(),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          plot.margin = margin(0, 0, 0.5, 0.5, "cm"),
-          panel.border = element_blank()
+          plot.margin = margin(0, 0, 0, 0.5, "cm"),
+          panel.border = element_blank(),
+          text = element_text(size = 7),
+          axis.ticks.x = element_line(color="white"),
+       axis.text.x = element_text(color="white")
         )+
-    coord_sf(expand = F, label_axes = "----")+
+    coord_sf(expand = F, label_axes = "--E-", ylim=c(-6200000, 8200000))+
     xlab(" ")
 )
 
+# to get Behrmann coordinates into cartesian coordinates, use orginal decimal degree
+sf::sf_use_s2(FALSE) 
+shp$centroids <- st_centroid(shp) %>% 
+  st_coordinates()
+shp$lng <- shp$centroids[,1]
+shp$lat <- shp$centroids[,2]
+
+library(pracma)
+library(scales)
+#transformer for axis
+cart <- function(x) {
+  xx <- x*pi/180
+  tmp <- sin(xx)*sec(30)
+  return(tmp)}
+cart_inv <- function(x) {
+  xx <- asin(x*cos(30))
+  xx/(pi/180)}
+trans_cart <- trans_new(name = "trans_cart",
+                        transform = cart,
+                        inverse = cart_inv)
+
 test$sr <- test$sr+10 # tweak to adjust for removed axis padding
-(sr_ldg_map <- ggplot(test, aes(lat,sr,col=sr))+
+(sr_ldg_map <- ggplot(shp, aes(lat,sr,col=sr))+
     geom_point(alpha=0.5)+
     scale_color_viridis_c("SR", option = "plasma", trans = "sqrt")+
     scale_y_continuous("SR/1000", trans = "sqrt", 
                        labels = c("0", "5", "10", "15", "20"),
                        breaks = c(0, 5000, 10000, 15000, 20000))+
-    scale_x_continuous("", labels = c("80°S","60°S","40°S","20°S", "0°", "20°N","40°N","60°N", "80°N"),
-                       breaks = c(-8000000,-6000000,-4000000, -2000000, 0, 2000000,4000000,6000000, 8000000), 
-                       position="bottom")+
+     scale_x_continuous("", labels = c("40°S","20°S", "0°", "20°N","40°N","60°N", "80°N"),
+                        breaks = c(-40.00000, -20.00000, 0, 20.00000,40.00000,60.00000, 80.00000),
+                        position="bottom", trans=trans_cart)+
     geom_smooth(col="grey40", lwd=0.5)+
-    coord_flip(xlim =c(-9020048, 8750122), ylim =c(0, max(shp$sr)+1500),expand = F)+
+    coord_flip(xlim=c(-60, 82),ylim =c(0, max(shp$sr)+1500),expand = F)+   
+#    coord_trans(y="trans_cart")+
     theme( panel.grid.major = element_blank(),
            panel.grid.minor = element_blank(),
-           plot.margin = margin(0, 0, 0, -0.4, "cm"),
+           plot.margin = margin(0.5, 0, 0, -0.2, "cm"),
            legend.position = "none", 
            panel.border = element_blank(),
            axis.line.y = element_line(),
-           axis.text.y = element_text(hjust = 0.5)))
-SR <- plot_grid(sr_map2, sr_ldg_map, 
-          ncol = 2, nrow = 1, 
-          rel_widths = c(4,1), rel_heights = c(1,1), labels = c("A", ""), label_fontface = "plain")
-#ggsave("../figures/sr_map_AIO_mollweide.png", dpi=600, width=10, height=4.32)
+           axis.text.y = element_text(hjust = 0.5),
+           text = element_text(size = 7),
+           axis.text = element_text(size = 7)))
+#(SR <- plot_grid(sr_map2, sr_ldg_map, 
+#          ncol = 2, nrow = 1, 
+#          rel_widths = c(4.1,1),
+#          labels = c("A", ""), label_fontface = "plain"))
+#ggsave("../figures/sr_map_AIO_behrmann.png", dpi=600, width=10, height=4.32)
 
 
 
@@ -768,50 +804,82 @@ SR <- plot_grid(sr_map2, sr_ldg_map,
 lcol.mrd <- (min(thicc_lines$mrd)-min(shp$mrd))/(max(shp$mrd)-min(shp$mrd))
 ucol.mrd <- (max(thicc_lines$mrd)-min(shp$mrd))/(max(shp$mrd)-min(shp$mrd))
 (mrd_map2 <- ggplot(test) + 
-  geom_sf(aes(fill = mrd), lwd=0.1) + 
+  geom_sf(aes(fill = mrd), lwd=0 , col=NA) + 
   geom_sf(data=thicc_lines, lwd=1.5, aes(col=mrd), show.legend=F)+
   scale_colour_viridis_c(option = "plasma", 
                          begin = lcol.mrd, end = ucol.mrd)+
   scale_fill_viridis_c("MRD", option = "plasma")+ #, 
-    theme(legend.position = c(0.21, 0.3),
+    theme(legend.position = c(0.18, 0.3),
+          legend.key.height = unit(6,"mm"),
           legend.background = element_blank(),
           legend.key = element_blank(),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          plot.margin = margin(0, 0, 0.5, 0.5, "cm"),
-          panel.border = element_blank()
+          plot.margin = margin(0, 0, 0, 0.5, "cm"),
+          panel.border = element_blank(),
+          text = element_text(size = 7),
+          axis.ticks.x = element_line(color="white"),
+          axis.text.x = element_text(color="white"), 
+          element_line(size=0) 
     )+
-    coord_sf(expand = F, label_axes = "----")+
+    coord_sf(expand = F, label_axes = "--E-", ylim=c(-6200000, 8200000))+
     xlab(" "))
-(mrd_ldg_map <- ggplot(test, aes(lat,mrd,col=mrd))+
+(mrd_ldg_map <- ggplot(shp, aes(lat,mrd,col=mrd))+
     geom_point(alpha=0.5)+
     scale_color_viridis_c("MRD", option = "plasma")+ 
     scale_y_continuous("MRD")+
-    scale_x_continuous("", labels = c("80°S","60°S","40°S","20°S", "0°", "20°N","40°N","60°N", "80°N"),
-                       breaks = c(-8000000,-6000000,-4000000, -2000000, 0, 2000000,4000000,6000000, 8000000), 
-                       position="bottom")+
+    scale_x_continuous("", labels = c("40°S","20°S", "0°", "20°N","40°N","60°N", "80°N"),
+                       breaks = c(-40.00000, -20.00000, 0, 20.00000,40.00000,60.00000, 80.00000), 
+                       position="bottom", trans=trans_cart)+
     geom_smooth(col="grey40", lwd=0.5)+
-    coord_flip(xlim =c(-9020048, 8750122), 
+    coord_flip(xlim =c(-60, 82), 
                ylim =c(min(test$mrd, na.rm = T)-1, max(test$mrd, na.rm = T)+1),expand = F)+
     theme( panel.grid.major = element_blank(),
            panel.grid.minor = element_blank(),
-           plot.margin = margin(0, 0, 0, -0.4, "cm"),
+           plot.margin = margin(0.5, 0, 0, -0.2, "cm"),
            legend.position = "none", 
            panel.border = element_blank(),
            axis.line.y = element_line(),
-           axis.text.y = element_text(hjust = 0.5))
+           axis.text.y = element_text(hjust = 0.5),
+           text = element_text(size = 7),
+           axis.text = element_text(size = 7))
 )
-MRD <- plot_grid(mrd_map2, mrd_ldg_map, 
-          ncol = 2, nrow = 1, 
-          rel_widths = c(4,1), labels = c("B", ""),  label_fontface = "plain")
-#ggsave("../figures/mrd_map_AIO.png", dpi=600, width=10, height=4.32)
+#(MRD <- plot_grid(mrd_map2, mrd_ldg_map, 
+#          ncol = 2, nrow = 1, 
+#          rel_widths = c(4.1,1), labels = c("B", ""),  label_fontface = "plain"))
+#ggsave("../figures/mrd_map_AIO.png", dpi=300, width=11.4, height=9.8496, units="cm")
 
-plot_grid(SR, MRD, nrow=2)
-ggsave("../figures/global_maps.png", dpi=600, width=10, height=8.64)
-ggsave("../figures/global_maps.pdf", dpi=600, width=10, height=8.64)
+#p<- plot_grid(SR, MRD, nrow=2)
+p <- plot_grid(sr_map2, sr_ldg_map, mrd_map2, mrd_ldg_map, 
+          rel_widths = c(4.1,1), labels = c("A", "", "B", ""),
+          label_fontface = "plain", label_size = 12)
+ggsave(plot=p, "../figures/global_maps_178.pdf", width=20, height=14.7,
+       units="cm", bg="white")
+ggsave("../figures/global_maps_178.png", width=20, height=14.7, 
+       units="cm", device="png", bg="white")
 
+#ggsave("../figures/global_maps.png", dpi=300, width=10, height=7, bg="white")
+# ggsave("../figures/global_maps_114.png", dpi=150, width=4.488189, height=2.85611811,
+#        bg="white", units="in", device = "png")
+# ggsave("../figures/global_maps_114.tiff", dpi=300, width=11.4, height=9.8496)
+# 
 
+# ggsave("../figures/global_maps.pdf", width=17.8, height=12.46,
+#        device = "pdf", units="cm")
+# ggsave2(plot = mrd_ldg_map, "../figures/test.pdf", width=17.8, height=12.46,
+#        device = "pdf", units="cm")
 
+# p <- ggplot(data=data.frame(x=1,y=5),aes(x,y))+geom_point()+xlab("more Text")+
+#   theme(text = element_text(size = 8),
+#         axis.text = element_text(size = 8),
+#         axis.title.x = element_text(size = 8))
+# p <- sr_map2+ sr_ldg_map + mrd_map2+mrd_ldg_map+ 
+#   plot_layout(widths = c(5, 1), byrow = T, ncol=2)
+ggsave(plot=p, "../figures/test3.pdf", width=10, height=7,
+        device = "pdf")
+#pdf("../figures/test_other_functon.pdf", width=10, height=12)
+#print(p)
+#dev.off()
 
 # *** DR map --------------------------------------------------------------
 lcol.mdr <- (min(thicc_lines$mdr)-min(shp$mdr))/(max(shp$mdr)-min(shp$mdr))
@@ -893,8 +961,8 @@ temp$g3 <- factor(temp$g3, levels = c("Americas","Afrope","Australasia"))
           axis.ticks = element_line(colour = "grey40"))+
     guides(color=guide_legend(override.aes=list(fill=NA))) # override geom_smooth() default legend key grey background
 )
-ggsave("../figures/map_lat_patterns.pdf", width=7.6, height=4)
-ggsave("../figures/map_lat_patterns.png", width=7.6, height=4)
+#ggsave("../figures/map_lat_patterns.pdf", width=7.6, height=4)
+ggsave("../figures/map_lat_patterns.png", width=7.6, height=4, dpi=300)
 
 (continent_scatterplot_comb <- ggplot(na.omit(temp), aes(lat, value, col=name))+
     geom_point(alpha=0.5)+
@@ -909,7 +977,7 @@ ggsave("../figures/map_lat_patterns.png", width=7.6, height=4)
     scale_colour_startrek(labels=c("MRD", "SR"), name="")+
     #theme_void()+
     theme(strip.background = element_blank(),
-          strip.text.x = element_text(size = 8),
+          strip.text.x = element_text(size = 10),
           panel.border = element_blank(),
           panel.grid = element_blank(),
           axis.line.x = element_line(colour = "grey40"),
@@ -918,8 +986,9 @@ ggsave("../figures/map_lat_patterns.png", width=7.6, height=4)
           plot.background = element_rect(fill = "transparent", color = NA))+
     guides(color=guide_legend(override.aes=list(fill=NA))) # override geom_smooth() default legend key grey background
 )
-ggsave("../figures/map_lat_patterns_alt.pdf", width=7.6, height=4, bg = "transparent")
-ggsave("../figures/map_lat_patterns_alt.png", width=7.6, height=4, bg = "transparent")
+#ggsave("../figures/map_lat_patterns_alt.pdf", width=7.6, height=4, bg = "transparent")
+ggsave("../figures/map_lat_patterns_alt.png", width=7.6, height=4,
+       bg = "transparent", dpi=300)
 
 
 # save region maps
@@ -1005,16 +1074,23 @@ pres3$sig <- pres3$pval<0.05
 aggregate(cor~name,data=pres3,mean)
 aggregate(pval~name,data=pres3,mean)
 
+hemis=
+  labeller(name = c(nh.mrd = "northern hemisphere MRD",
+                    nh.sr = "northern hemisphere SR",
+                    sh.mrd = "southern hemisphere MRD",
+                    sh.sr = "southern hemisphere SR"))
 ggplot(pres3, aes(cor, fill=sig))+
   geom_histogram()+
   geom_vline(data=ddply(pres3, "name", summarize, cormean = mean(cor)), aes(xintercept=cormean),
              lty=2)+
   geom_vline(xintercept=0)+
-  facet_wrap(~name)+
+  facet_wrap(~name, labeller = hemis)+ #, 
   theme(strip.background = element_blank(),
         strip.text.x = element_text(size = 8))+
-  scale_fill_startrek(name="Pvalue < 0.05")
-ggsave("../figures/lat_patterns_robustness.png", width=6, height=4.5)
+  scale_fill_startrek(name="Pvalue < 0.05")+
+  xlab("correlation")
+  
+ggsave("../figures/lat_patterns_robustness.png", width=6, height=4.5, dpi=300)
 
 
 

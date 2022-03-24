@@ -60,9 +60,30 @@ dim(dat_no.na)
 cor.dat_no.na<- cor(dat_no.na[,-grep("level3",names(dat_no.na))])
 p.dat_no.na <- cor_pmat(dat_no.na[,-grep("level3",names(dat_no.na))])
 
+# make names more readable
+fn <- colnames(p.dat_no.na)
+fn <- gsub("mdr", "DR", fn)
+fn <- gsub("sr", "SR", fn)
+fn <- gsub("mrd", "MRD", fn)
+fn <- gsub("mio_pre_ano_mean", "mio_pre_ano", fn)
+fn <- gsub("mio_mat_ano_mean", "mio_mat_ano", fn)
+fn <- gsub("mat_lgm_ano_mean", "lgm_mat_ano", fn)
+fn <- gsub("pre_lgm_ano_mean", "lgm_pre_ano", fn)
+fn <- gsub("sub_trop_", "(sub)trop ", fn)
+colnames(cor.dat_no.na) <- fn
+row.names(cor.dat_no.na) <- fn
+
+
+# fn.col <- rep("black", length(fn))
+# fn.col[grep("_sd|soil|area|tri|elev_range", fn)] <- "#F471B2"
+# fn.col[grep("_ano", fn)] <- "#F48771"
+# fn.col[grep("_ano", fn)] <- "#F48771"
+# pre
+
 my.corrplot(cor.dat_no.na, lab=F, p.mat = p.dat_no.na, insig = "blank",
             tl.cex = 8, digits = 1, type = "lower", hc.order = FALSE,
-            lab_size = 4, highlight = TRUE, method="square", lab_col = "grey20")+
+            lab_size = 4, highlight = TRUE, method="square", lab_col = grey20,
+            colors = c("#6874DE", "white", "#D80000"))+
   scale_y_discrete(position = "right")+
   theme(axis.text.x = element_text(margin=margin(0,0,0,0)),  # Order: top, right, bottom, left
         axis.text.y = element_text(margin=margin(0,0,0,0)),
@@ -202,8 +223,22 @@ fin_sr <- sort(tapply(eq$Var2, eq$value, function(x){sum(x)/length(x)}), decreas
 # select variables that score lowest position relative to their number of
 # appearances in different positions
 fin_sr <- data.frame(fin_sr, variable=names(fin_sr))
+
+# make names more readable
+fn <- fin_sr$variable
+fn <- gsub("mdr", "DR", fn)
+fn <- gsub("sr", "SR", fn)
+fn <- gsub("mrd", "MRD", fn)
+fn <- gsub("mio_pre_ano_mean", "mio_pre_ano", fn)
+fn <- gsub("mio_mat_ano_mean", "mio_mat_ano", fn)
+fn <- gsub("mat_lgm_ano_mean", "lgm_mat_ano", fn)
+fn <- gsub("pre_lgm_ano_mean", "lgm_pre_ano", fn)
+fn <- gsub("sub_trop_", "(sub)trop ", fn)
+fin_sr$variable <- fn
+
 fin_sr <- fin_sr[order(fin_sr$fin_sr, decreasing = T),]
 fin_sr$variable <- factor(fin_sr$variable, levels = fin_sr$variable)
+
 tot.position.sr <- ggplot(fin_sr[c((nrow(fin_sr)-30):nrow(fin_sr)),], aes(y=variable, x=fin_sr))+
   #xlab("Average variable position")+
   geom_bar(stat = "identity")+
@@ -261,6 +296,19 @@ fin_mrd <- sort(tapply(eq$Var2, eq$value, function(x){sum(x)/length(x)}), decrea
 # appearances in different positions
 names(fin_mrd[1:14])
 fin_mrd <- data.frame(fin_mrd, variable=names(fin_mrd))
+
+# make names more readable
+fn <- fin_mrd$variable
+fn <- gsub("mdr", "DR", fn)
+fn <- gsub("sr", "SR", fn)
+fn <- gsub("mrd", "MRD", fn)
+fn <- gsub("mio_pre_ano_mean", "mio_pre_ano", fn)
+fn <- gsub("mio_mat_ano_mean", "mio_mat_ano", fn)
+fn <- gsub("mat_lgm_ano_mean", "lgm_mat_ano", fn)
+fn <- gsub("pre_lgm_ano_mean", "lgm_pre_ano", fn)
+fn <- gsub("sub_trop_", "(sub)trop ", fn)
+fin_mrd$variable <- fn
+
 fin_mrd <- fin_mrd[order(fin_mrd$fin_mrd, decreasing = T),]
 fin_mrd$variable <- factor(fin_mrd$variable, levels = fin_mrd$variable)
 tot.position.mrd <- ggplot(fin_mrd[c((nrow(fin_mrd)-28):nrow(fin_mrd)),], aes(y=variable, x=fin_mrd))+
@@ -320,6 +368,19 @@ fin_mdr <- sort(tapply(eq$Var2, eq$value, function(x){sum(x)/length(x)}), decrea
 # appearances in different positions
 names(fin_mdr[1:13])
 fin_mdr <- data.frame(fin_mdr, variable=names(fin_mdr))
+
+# make names more readable
+fn <- fin_mdr$variable
+fn <- gsub("mdr", "DR", fn)
+fn <- gsub("sr", "SR", fn)
+fn <- gsub("mrd", "MRD", fn)
+fn <- gsub("mio_pre_ano_mean", "mio_pre_ano", fn)
+fn <- gsub("mio_mat_ano_mean", "mio_mat_ano", fn)
+fn <- gsub("mat_lgm_ano_mean", "lgm_mat_ano", fn)
+fn <- gsub("pre_lgm_ano_mean", "lgm_pre_ano", fn)
+fn <- gsub("sub_trop_", "(sub)trop ", fn)
+fin_mdr$variable <- fn
+
 fin_mdr <- fin_mdr[order(fin_mdr$fin_mdr, decreasing = T),]
 fin_mdr$variable <- factor(fin_mdr$variable, levels = fin_mdr$variable)
 (tot.position.mdr <- ggplot(fin_mdr[c((nrow(fin_mdr)-28):nrow(fin_mdr)),], aes(y=variable, x=fin_mdr))+
@@ -328,13 +389,12 @@ fin_mdr$variable <- factor(fin_mdr$variable, levels = fin_mdr$variable)
   theme(axis.title.x = element_blank(), axis.text.y = element_text(size=9),
   axis.title.y = element_blank()))
 
-
 temp <- plot_grid(ncol = 3,
           labels = c("A", "B", "C"), label_fontface = "plain",
           tot.position.sr, tot.position.mrd, tot.position.mdr)
 ggdraw(add_sub(temp, "Average variable position", vpadding=grid::unit(0.5,"lines"),y=3, x=0.5, vjust=4.5, 
                size = 11))
-#ggsave("../figures/total_var_position_GBM.png", width=7, height=5, units = "in", dpi = 600, bg = "white")
+ggsave("../figures/total_var_position_GBM.png", width=7, height=5, units = "in", dpi = 600, bg = "white")
 
 
 
