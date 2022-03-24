@@ -748,7 +748,8 @@ test$lat <- test$centroids[,2] # y=lat
     xlab(" ")
 )
 
-# to get Behrmann coordinates into cartesian coordinates, use orginal decimal degree
+# build axis transformation to match Behrmann coordinates with cartesian
+# coordinates of scatterplot
 sf::sf_use_s2(FALSE) 
 shp$centroids <- st_centroid(shp) %>% 
   st_coordinates()
