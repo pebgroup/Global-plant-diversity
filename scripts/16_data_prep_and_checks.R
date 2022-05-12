@@ -209,7 +209,7 @@ sr_list <- unlist(sr_list, recursive = F)
 
 
 eq <- matrix(sapply(sr_list, "[[", 1), ncol=31, byrow = T)
-eq <- melt(eq)
+eq <- reshape2::melt(eq)
 ggplot(eq, aes(value))+
   geom_bar()+
   facet_wrap(~Var2, scales = "free")+
@@ -279,7 +279,7 @@ mrd_list <- sapply(filnames, readRDS, simplify = F)
 mrd_list <- unlist(mrd_list, recursive = F)
 
 eq <- matrix(sapply(mrd_list, "[[", 1), ncol=29, byrow = T)
-eq <- melt(eq)
+eq <- reshape2::melt(eq)
 ggplot(eq, aes(value))+
   geom_bar()+
   facet_wrap(~Var2, scales = "free")+
@@ -351,7 +351,7 @@ mdr_list <- sapply(filnames, readRDS, simplify = F)
 # combine files
 mdr_list <- unlist(mdr_list, recursive = F)
 eq <- matrix(sapply(mdr_list, "[[", 1), ncol=29, byrow = T)
-eq <- melt(eq)
+eq <- reshape2::melt(eq)
 ggplot(eq, aes(value))+
   geom_bar()+
   facet_wrap(~Var2, scales = "free")+
@@ -359,7 +359,7 @@ ggplot(eq, aes(value))+
         strip.background = element_blank())
 #ggplot(eq, aes(x=Var2, group=value, fill=value))+
 #  geom_bar(position = "fill")
-ggsave("../figures/varImp_MDR_gbm100_runs.png", width=8, height=7, units = "in", dpi = 600)
+#ggsave("../figures/varImp_MDR_gbm100_runs.png", width=8, height=7, units = "in", dpi = 600)
 
 eqr <-tapply(eq$value, eq$Var2, function(x){names(sort(table(x), decreasing = T))})
 fin_mdr <- sort(tapply(eq$Var2, eq$value, function(x){sum(x)/length(x)}), decreasing=F)
@@ -394,7 +394,7 @@ temp <- plot_grid(ncol = 3,
           tot.position.sr, tot.position.mrd, tot.position.mdr)
 ggdraw(add_sub(temp, "Average variable position", vpadding=grid::unit(0.5,"lines"),y=3, x=0.5, vjust=4.5, 
                size = 11))
-ggsave("../figures/total_var_position_GBM.png", width=7, height=5, units = "in", dpi = 600, bg = "white")
+#ggsave("../figures/total_var_position_GBM.png", width=7, height=5, units = "in", dpi = 600, bg = "white")
 
 
 
@@ -502,10 +502,18 @@ dat_no.na$prs_sd <- sqrt(dat_no.na$prs_sd)
 dat_no.na$mdr <- log1p(dat_no.na$mdr)
 
 # Scale data ################################################################
+source("0_functions.R")
 # z-transformation to avoid variance issues in SEM
 dat_no.na <- dat_no.na[,-grep("level3",names(dat_no.na))]
 dat_no.na <- apply(dat_no.na, 2, ztrans)
 dat_no.na <- as.data.frame(dat_no.na)
+
+
+# Add botanical country names back to file
+s <- readOGR("../data/shapefile_bot_countries/level3.shp")
+s@data$botanical_country_name <- s@data$LEVEL_NAME
+dat_no.na$LEVEL_3_CO <- row.names(dat_no.na)
+dat_no.na <- merge(dat_no.na, s@data[,c("LEVEL_3_CO", "botanical_country_name")], all.x=TRUE)
 
 saveRDS(dat_no.na, "../processed_data/sem/sem_input_data.RDS")
 # feed this into model selection
